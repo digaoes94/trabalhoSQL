@@ -1,0 +1,59 @@
+classDiagram
+    class Pessoa {
+        -Integer id
+        -Endereco endereco
+        -String email
+        -Telefone[] telefones
+    }
+
+    class Fornecedor {
+        -String cnpj
+        -String razaoSocial
+        -String nomeFantasia
+        -Compra[] pedidos
+    }
+
+    class ItemCompra {
+        -Integer id_fornecedor
+        -Produto produto
+        -Integer quantidade
+        -Double precoUnidade
+        -Double subTotal
+    }
+
+    class Compra {
+        -Integer id
+        -ItemCompra[] itens
+        -Date data
+        -Double total
+    }
+
+    class Cliente {
+        -String cpf
+        -String nome
+        -Venda[] pedidos
+    }
+
+    class ItemVenda {
+        -Integer id_cliente
+        -Produto produto
+        -Integer quantidade
+        -Double precoUnidade
+        -Double subTotal
+    }
+
+    class Venda {
+        -Integer id
+        -ItemVenda[] itens
+        -Date data
+        -Double total
+    }
+
+    Pessoa <|-- Fornecedor
+    Pessoa <|-- Cliente
+
+    Cliente "1" --> "0..*" Compra
+    Compra "1" --> "1..*" ItemCompra
+
+    Fornecedor "1" --> "0..*" Venda
+    Venda "1" --> "1..*" ItemVenda
