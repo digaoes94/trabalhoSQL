@@ -1,12 +1,12 @@
 classDiagram
     class Pessoa {
-        -Integer id
         -Endereco endereco
         -String email
-        -Telefone[] telefones
+        -String[] telefones
     }
 
     class Fornecedor {
+        -Integer id
         -String cnpj
         -String razaoSocial
         -String nomeFantasia
@@ -29,6 +29,7 @@ classDiagram
     }
 
     class Cliente {
+        -Integer id
         -String cpf
         -String nome
         -Venda[] pedidos
@@ -49,6 +50,18 @@ classDiagram
         -Double total
     }
 
+    %%-- seria interessante criar uma função autoCEP(String cep), mas teríamos de baixar as tabelas de CEP do IBGE --%%
+    %%-- no caso essa função buscaria do CEP da pessoa e completaria automaticamente o Estado, Cidade, Bairro e Logradouro de Endereco  --%%
+    class Endereco {
+        -String cep
+        -String logradouro
+        -Integer numero
+        -String complemento
+        -String bairro
+        -String cidade
+        -String estado
+    }
+
     Pessoa <|-- Fornecedor
     Pessoa <|-- Cliente
 
@@ -57,3 +70,5 @@ classDiagram
 
     Fornecedor "1" --> "0..*" Venda
     Venda "1" --> "1..*" ItemVenda
+
+    
