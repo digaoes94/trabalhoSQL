@@ -1,28 +1,70 @@
 erDiagram
     PESSOA {
-        
+        ENDERECO Endereco "Null or Not Null"
+        String email "Null or Not Null"
+        String[] telefones "Null or Not Null"
     }
 
     FORNECEDOR {
         Integer ID PK "Not Null"
+        String cnpj"Not Null"
+        String razao_social"Not Null"
+        String nome_fantasia "Null or Not Null"
+        COMPRA[] pedidos "Null or Not Null"
     }
 
     ITEM_COMPRA {
-        Integer ID PK "Not Null"
+        Integer ID_FORNECEDOR FK "Not Null"
+        PRODUTO produto "Not Null"
+        Integer quantidade"Not Null"
+        Double preco_unidade"Not Null"
+        Double sub_total"Not Null"
     }
 
     COMPRA {
         Integer ID PK "Not Null"
+        ITEM_COMPRA[] itens"Not Null"
+        Date data "Null or Not Null"
+        Double total"Not Null"
     }
 
     CLIENTE {
         Integer ID PK "Not Null"
+        String cpf"Not Null"
+        String nome"Not Null"
+        Venda[] pedidos "Null or Not Null"
     }
 
     ITEM_VENDA {
-        Integer ID PK "Not Null"
+        Integer ID_CLIENTE FK "Not Null"
+        PRODUTO produto "Not Null"
+        Integer quantidade"Not Null"
+        Double preco_unidade"Not Null"
+        Double sub_total"Not Null"
     }
 
     VENDA {
         Integer ID PK "Not Null"
+        ITEM_VENDA[] itens"Not Null"
+        Date data "Null or Not Null"
+        Double total"Not Null"
     }
+
+    ENDERECO {
+        String cep "Null or Not Null"
+        String logradouro "Null or Not Null"
+        Integer numero "Null or Not Null"
+        String complemento "Null or Not Null"
+        String bairro "Null or Not Null"
+        String cidade "Null or Not Null"
+        String estado "Null or Not Null"
+    }
+
+    PESSOA ||--|| FORNECEDOR : ""
+    PESSOA ||--|| CLIENTE : ""
+
+    FORNECEDOR ||--|{ COMPRA : "compramos de"
+    COMPRA ||--|{ ITEM_COMPRA : "compõem"
+
+    CLIENTE ||--O{ VENDA : "vendemos para"
+    VENDA ||--|{ ITEM_VENDA : "compõem"

@@ -1,5 +1,6 @@
 classDiagram
     class Pessoa {
+        <<abstract>>
         -Endereco endereco
         -String email
         -String[] telefones
@@ -65,10 +66,8 @@ classDiagram
     Pessoa <|-- Fornecedor
     Pessoa <|-- Cliente
 
-    Cliente "1" --> "0..*" Compra
+    Fornecedor "1" --> "0..*" Compra
     Compra "1" --> "1..*" ItemCompra
 
-    Fornecedor "1" --> "0..*" Venda
+    Cliente "1" --> "0..*" Venda
     Venda "1" --> "1..*" ItemVenda
-
-    
