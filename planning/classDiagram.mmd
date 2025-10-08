@@ -12,6 +12,11 @@ classDiagram
         -String razaoSocial
         -String nomeFantasia
         -Compra[] pedidos
+
+        +pesquisarFornecedor()
+        +atualizarFornecedor()
+        +novoFornecedor()
+        +deletarFornecedor()
     }
 
     class ItemCompra {
@@ -34,6 +39,11 @@ classDiagram
         -String cpf
         -String nome
         -Venda[] pedidos
+        
+        +pesquisarCliente()
+        +atualizarCliente()
+        +novoCliente()
+        +deletarCliente()
     }
 
     class ItemVenda {
@@ -49,6 +59,18 @@ classDiagram
         -ItemVenda[] itens
         -Date data
         -Double total
+    }
+
+    class Produto {
+        -Integer id_produto
+        -String nome
+        -Double preco
+        -String descricao
+
+        +pesquisarProduto()
+        +atualizarProduto()
+        +novoProduto()
+        +deletarProduto()
     }
 
     %%-- seria interessante criar uma função autoCEP(String cep), mas teríamos de baixar as tabelas de CEP do IBGE --%%
@@ -71,3 +93,6 @@ classDiagram
 
     Cliente "1" --> "0..*" Venda
     Venda "1" --> "1..*" ItemVenda
+
+    ItemCompra "1..*" --> "1" Produto
+    ItemVenda "1..*" --> "1" Produto
