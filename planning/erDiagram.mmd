@@ -10,7 +10,6 @@ erDiagram
         VARCHAR2 cnpj "Not Null"
         VARCHAR2 razao_social "Not Null"
         VARCHAR2 nome_fantasia "Null or Not Null"
-        COMPRA[] pedidos "Null or Not Null"
     }
 
     ITEM_COMPRA {
@@ -23,6 +22,7 @@ erDiagram
 
     COMPRA {
         NUMBER ID PK "Not Null"
+        NUMBER ID_FORNECEDOR FK "Not Null"
         ITEM_COMPRA[] itens"Not Null"
         DATE data "Null or Not Null"
         NUMBER total "Not Null"
@@ -32,7 +32,6 @@ erDiagram
         NUMBER ID PK "Not Null"
         VARCHAR2 cpf "Not Null"
         VARCHAR2 nome "Not Null"
-        Venda[] pedidos "Null or Not Null"
     }
 
     ITEM_VENDA {
@@ -45,9 +44,17 @@ erDiagram
 
     VENDA {
         NUMBER ID PK "Not Null"
+        NUMBER ID_CLIENTE FK "Not Null"
         ITEM_VENDA[] itens"Not Null"
         DATE data "Null or Not Null"
         NUMBER total "Not Null"
+    }
+
+    PRODUTO {
+        NUMBER ID_PRODUTO PK "Not Null"
+        VARCHAR2 nome "Not Null"
+        NUMBER preco "Not Null"
+        VARCHAR2 descricao "Null or Not Null"
     }
 
     ENDERECO {
@@ -58,13 +65,6 @@ erDiagram
         VARCHAR2 bairro "Null or Not Null"
         VARCHAR2 cidade "Null or Not Null"
         VARCHAR2 estado "Null or Not Null"
-    }
-
-    PRODUTO {
-        NUMBER ID_PRODUTO PK "Not Null"
-        VARCHAR2 nome "Not Null"
-        NUMBER preco "Not Null"
-        VARCHAR2 descricao "Null or Not Null"
     }
 
     PESSOA ||--|| FORNECEDOR : ""

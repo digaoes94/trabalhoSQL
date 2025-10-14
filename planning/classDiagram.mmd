@@ -11,13 +11,12 @@ classDiagram
         -String cnpj
         -String razaoSocial
         -String nomeFantasia
-        -Compra[] pedidos
 
         +pesquisarFornecedor()
         +atualizarFornecedor()
         +novoFornecedor()
         +deletarFornecedor()
-        +verPedidos()
+        +verPedidos(id)
     }
 
     class ItemCompra {
@@ -30,6 +29,7 @@ classDiagram
 
     class Compra {
         -Integer id
+        -Integer id_fornecedor
         -ItemCompra[] itens
         -Date data
         -Double total
@@ -39,13 +39,12 @@ classDiagram
         -Integer id
         -String cpf
         -String nome
-        -Venda[] pedidos
         
         +pesquisarCliente()
         +atualizarCliente()
         +novoCliente()
         +deletarCliente()
-        +verPedidos()
+        +verPedidos(id)
     }
 
     class ItemVenda {
@@ -58,6 +57,7 @@ classDiagram
 
     class Venda {
         -Integer id
+        -Integer id_cliente
         -ItemVenda[] itens
         -Date data
         -Double total
