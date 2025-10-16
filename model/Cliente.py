@@ -12,10 +12,10 @@ class Cliente(Pessoa): # Sintaxe da Herança
                  telefones:list=None
                 ):
         
-        # 1. Chama o construtor da classe mãe (Pessoa) para inicializar os atributos herdados
+        # Chama o construtor da classe mãe (Pessoa) para inicializar os atributos herdados
         super().__init__(endereco, email, telefones)
-        
-        # 2. Inicializa os atributos específicos da classe Cliente
+    
+        # Inicializa os atributos específicos de Cliente
         self.id_cliente = id_cliente
         self.cpf = cpf
         self.nome = nome

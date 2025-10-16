@@ -12,5 +12,5 @@ class Pessoa:
 
     def to_string(self) -> str:
         telefones_str = ", ".join(self.telefones)
-        # Note que chamamos o método .to_string() do objeto endereco
+       
         return f"Email: {self.email} | Telefones: {telefones_str} | Endereço: {self.endereco.to_string()}" 

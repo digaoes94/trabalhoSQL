@@ -13,7 +13,7 @@ class Fornecedor(Pessoa):
                  telefones:list=None
                 ):
         # Chama o construtor da classe mãe (Pessoa)
-        super().__init__(endereco, email, telephones)
+        super().__init__(endereco, email, telefones)
         
         # Inicializa os atributos específicos de Fornecedor
         self.id_fornecedor = id_fornecedor
