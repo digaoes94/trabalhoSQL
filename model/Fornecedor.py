@@ -1,25 +1,34 @@
-from model.Pessoa import Pessoa
 from model.Endereco import Endereco
 
-class Fornecedor(Pessoa):
+class Fornecedor:
     def __init__(self, 
-                 id_fornecedor:int=None,
-                 cnpj:str=None,
-                 razao_social:str=None,
-                 nome_fantasia:str=None,
-                 # Parâmetros herdados de Pessoa
-                 endereco:Endereco=None, 
-                 email:str=None,
-                 telefones:list=None
+                 cnpj:str,
+                 razaoSocial:str,
+                 nomeFantasia:str,
+                 endereco:Endereco, 
+                 email:str,
+                 telefone:list
                 ):
-        # Chama o construtor da classe mãe (Pessoa)
-        super().__init__(endereco, email, telefones)
-        
-        # Inicializa os atributos específicos de Fornecedor
-        self.id_fornecedor = id_fornecedor
         self.cnpj = cnpj
-        self.razao_social = razao_social
-        self.nome_fantasia = nome_fantasia
+        self.razaoSocial = razaoSocial
+        self.nomeFantasia = nomeFantasia
+        self.endereco = endereco
+        self.email = email
+        self.telefone = telefone
+
+    def getCNPJ(self) -> str: return self.cnpj
+    def getRazaoSocial(self) -> str: return self.razaoSocial
+    def getNomeFantasia(self) -> str: return self.nomeFantasia
+    def getEndereco(self) -> Endereco: return self.endereco
+    def getEmail(self) -> str: return self.email
+    def getTelefone(self) -> str: return self.telefone
+
+    def setCNPJ(self, cnpj:str): self.cnpj = cnpj
+    def setRazaoSocial(self, razaoSocial:str): self.razaoSocial = razaoSocial
+    def setNomeFantasia(self, nomeFantasia:str): self.nomeFantasia = nomeFantasia
+    def setEndereco(self, endereco:Endereco): self.endereco = endereco
+    def setEmail(self, email:str): self.email = email
+    def setTelefone(self, telefone:str): self.telefone = telefone
 
     def to_string(self) -> str:
-        return f"ID: {self.id_fornecedor} | Nome Fantasia: {self.nome_fantasia} | CNPJ: {self.cnpj}"
+        return f"ID: {self.id_fornecedor} | Nome Fantasia: {self.nomeFantasia} | CNPJ: {self.cnpj}"
