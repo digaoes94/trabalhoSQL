@@ -16,8 +16,8 @@ class Venda:
         self.total = total
 
 
-        def to_string(self) -> str:
-            nome_cliente = self.cliente.nome if self.cliente is not None else "N/A"
-            valor_total_str = f"R$ {self.total:.2f}" if self.total is not None else "N/A"
-            
-            return f"ID: {self.id_venda} | Data: {self.data} | Cliente: {nome_cliente} | Total: {valor_total_str}"
+    def to_string(self) -> str:
+        nome_cliente = self.cliente.nome if self.cliente is not None else "N/A"
+        valor_total_str = f"R$ {self.total:.2f}" if self.total is not None else "N/A"
+        
+        return f"ID: {self.id_venda} | Data: {self.data} | Cliente: {nome_cliente} | Total: {valor_total_str}"

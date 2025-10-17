@@ -3,13 +3,13 @@ from model.Compra import Compra
 
 class ItemCompra: 
     def __init__(self,
-                 protuto: Produto=None,
+                 produto: Produto=None,
                  quantidade: int=None,
                  preco_unitario: float=None,
                  subtotal: float=None,
                  compra: Compra=None
                  ):
-        self.produto = protuto
+        self.produto = produto
         self.quantidade = quantidade
         self.preco_unitario = preco_unitario
         self.subtotal = subtotal
