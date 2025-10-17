@@ -1,24 +1,30 @@
-from model.Pessoa import Pessoa
 from model.Endereco import Endereco
 
-class Cliente(Pessoa): # Sintaxe da Herança
+class Cliente:
     def __init__(self, 
-                 id_cliente:int=None,
-                 cpf:str=None,
-                 nome:str=None,
-                 # Parâmetros que serão passados para a classe mãe (Pessoa)
-                 endereco:Endereco=None, 
-                 email:str=None,
-                 telefones:list=None
+                 cpf:str,
+                 nome:str,
+                 endereco:Endereco, 
+                 email:str,
+                 telefone:list
                 ):
-        
-        # Chama o construtor da classe mãe (Pessoa) para inicializar os atributos herdados
-        super().__init__(endereco, email, telefones)
-    
-        # Inicializa os atributos específicos de Cliente
-        self.id_cliente = id_cliente
         self.cpf = cpf
         self.nome = nome
+        self.endereco = endereco
+        self.email = email
+        self.telefone = telefone
+
+    def getCPF(self) -> str: return self.cpf
+    def getNome(self) -> str: return self.nome
+    def getEndereco(self) -> Endereco: return self.endereco
+    def getEmail(self) -> str: return self.email
+    def getTelefone(self) -> str: return self.telefone
+
+    def setCPF(self, cpf:str): self.cpf = cpf
+    def setNome(self, nome:str): self.nome = nome
+    def setEndereco(self, endereco:Endereco): self.endereco = endereco
+    def setEmail(self, email:str): self.email = email
+    def setTelefone(self, telefone:str): self.telefone = telefone
 
     def to_string(self) -> str:
         pessoa_str = super().to_string()
