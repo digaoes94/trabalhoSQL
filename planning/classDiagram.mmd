@@ -1,26 +1,22 @@
 classDiagram
-    class Pessoa {
-        <<abstract>>
-        -Endereco endereco
-        -String email
-        -String[] telefones
-    }
 
     class Fornecedor {
-        -Integer id
         -String cnpj
         -String razaoSocial
         -String nomeFantasia
+        -Endereco endereco
+        -String email
+        -String telefone
 
-        +pesquisarFornecedor()
-        +atualizarFornecedor()
+        +pesquisarFornecedor(cpf)
         +novoFornecedor()
-        +deletarFornecedor()
-        +verPedidos(id)
+        +atualizarFornecedor(cpf)
+        +deletarFornecedor(cpf)
+        +verPedidos(cpf)
     }
 
     class ItemCompra {
-        -Integer id_fornecedor
+        -String cnpjFornecedor
         -Produto produto
         -Integer quantidade
         -Double precoUnidade
@@ -29,26 +25,28 @@ classDiagram
 
     class Compra {
         -Integer id
-        -Integer id_fornecedor
+        -String cnpjFornecedor
         -ItemCompra[] itens
         -Date data
         -Double total
     }
 
     class Cliente {
-        -Integer id
         -String cpf
         -String nome
+        -Endereco endereco
+        -String email
+        -String telefone
         
-        +pesquisarCliente()
-        +atualizarCliente()
+        +pesquisarCliente(cpf)
         +novoCliente()
-        +deletarCliente()
-        +verPedidos(id)
+        +atualizarCliente(cpf)
+        +deletarCliente(cpf)
+        +verPedidos(cpf)
     }
 
     class ItemVenda {
-        -Integer id_cliente
+        -String cpfCliente
         -Produto produto
         -Integer quantidade
         -Double precoUnidade
@@ -57,22 +55,22 @@ classDiagram
 
     class Venda {
         -Integer id
-        -Integer id_cliente
+        -String cpfCliente
         -ItemVenda[] itens
         -Date data
         -Double total
     }
 
     class Produto {
-        -Integer id_produto
+        -Integer id
         -String nome
-        -Double preco
+        -Double precoUnitario
         -String descricao
 
-        +pesquisarProduto()
-        +atualizarProduto()
+        +pesquisarProduto(id)
         +novoProduto()
-        +deletarProduto()
+        +atualizarProduto(id)
+        +deletarProduto(id)
     }
 
     %%-- seria interessante criar uma função autoCEP(String cep), mas teríamos de baixar as tabelas de CEP do IBGE --%%
@@ -86,9 +84,6 @@ classDiagram
         -String cidade
         -String estado
     }
-
-    Pessoa <|-- Fornecedor
-    Pessoa <|-- Cliente
 
     Fornecedor "1" --> "0..*" Compra
     Compra "1" --> "1..*" ItemCompra

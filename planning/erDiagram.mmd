@@ -1,57 +1,55 @@
 erDiagram
-    PESSOA {
-        ENDERECO Endereco "Null or Not Null"
-        VARCHAR2 email "Null or Not Null"
-        VARCHAR2[] telefones "Null or Not Null"
-    }
-
     FORNECEDOR {
-        NUMBER ID PK "Not Null"
-        VARCHAR2 cnpj "Not Null"
+        VARCHAR2 cnpj PK "Not Null"
         VARCHAR2 razao_social "Not Null"
         VARCHAR2 nome_fantasia "Null or Not Null"
+        ENDERECO Endereco "Null or Not Null"
+        VARCHAR2 email "Null or Not Null"
+        VARCHAR2 telefone "Null or Not Null"
     }
 
     ITEM_COMPRA {
-        NUMBER ID_FORNECEDOR FK "Not Null"
-        PRODUTO produto FK "Not Null"
+        VARCHAR2 CNPJ_FORNECEDOR PK "Not Null"
+        PRODUTO produto PK "Not Null"
         NUMBER quantidade "Not Null"
-        NUMBER preco_unidade "Not Null"
-        NUMBER sub_total "Not Null"
+        NUMBER precoUnidade "Not Null"
+        NUMBER subTotal "Not Null"
     }
 
     COMPRA {
-        NUMBER ID PK "Not Null"
-        NUMBER ID_FORNECEDOR FK "Not Null"
-        ITEM_COMPRA[] itens"Not Null"
+        NUMBER id PK "Not Null"
+        VARCHAR2 CNPJ_FORNECEDOR FK "Not Null"
+        ITEM_COMPRA[] itens "Not Null"
         DATE data "Null or Not Null"
         NUMBER total "Not Null"
     }
 
     CLIENTE {
-        NUMBER ID PK "Not Null"
-        VARCHAR2 cpf "Not Null"
+        VARCHAR2 cpf PK "Not Null"
         VARCHAR2 nome "Not Null"
+        ENDERECO Endereco "Null or Not Null"
+        VARCHAR2 email "Null or Not Null"
+        VARCHAR2 telefone "Null or Not Null"
     }
 
     ITEM_VENDA {
-        NUMBER ID_CLIENTE FK "Not Null"
-        PRODUTO produto FK "Not Null"
+        NUMBER CPF_CLIENTE PK "Not Null"
+        PRODUTO produto PK "Not Null"
         NUMBER quantidade "Not Null"
-        NUMBER preco_unidade "Not Null"
-        NUMBER sub_total "Not Null"
+        NUMBER precoUnidade "Not Null"
+        NUMBER subTotal "Not Null"
     }
 
     VENDA {
-        NUMBER ID PK "Not Null"
-        NUMBER ID_CLIENTE FK "Not Null"
-        ITEM_VENDA[] itens"Not Null"
+        NUMBER id PK "Not Null"
+        NUMBER CPF_CLIENTE FK "Not Null"
+        ITEM_VENDA[] itens "Not Null"
         DATE data "Null or Not Null"
         NUMBER total "Not Null"
     }
 
     PRODUTO {
-        NUMBER ID_PRODUTO PK "Not Null"
+        NUMBER id PK "Not Null"
         VARCHAR2 nome "Not Null"
         NUMBER preco "Not Null"
         VARCHAR2 descricao "Null or Not Null"
@@ -66,9 +64,6 @@ erDiagram
         VARCHAR2 cidade "Null or Not Null"
         VARCHAR2 estado "Null or Not Null"
     }
-
-    PESSOA ||--|| FORNECEDOR : ""
-    PESSOA ||--|| CLIENTE : ""
 
     FORNECEDOR ||--|{ COMPRA : "compramos de"
     COMPRA ||--|{ ITEM_COMPRA : "compõem"
