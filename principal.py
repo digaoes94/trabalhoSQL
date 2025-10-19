@@ -1,5 +1,4 @@
 from model.Endereco import Endereco
-from model.Pessoa import Pessoa
 from model.Fornecedor import Fornecedor
 from model.Cliente import Cliente
 from model.Produto import Produto

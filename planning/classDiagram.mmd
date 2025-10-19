@@ -8,6 +8,7 @@ classDiagram
         -String email
         -String telefone
 
+        %% Controllers %%
         +pesquisarFornecedor(cpf)
         +novoFornecedor()
         +atualizarFornecedor(cpf)
@@ -29,6 +30,12 @@ classDiagram
         -ItemCompra[] itens
         -Date data
         -Double total
+
+         %% Controllers %%
+        +pesquisarCompra(id)
+        +novaCompra()
+        +atualizarCompra(id)
+        +deletarCompra(id)
     }
 
     class Cliente {
@@ -38,6 +45,7 @@ classDiagram
         -String email
         -String telefone
         
+         %% Controllers %%
         +pesquisarCliente(cpf)
         +novoCliente()
         +atualizarCliente(cpf)
@@ -59,6 +67,12 @@ classDiagram
         -ItemVenda[] itens
         -Date data
         -Double total
+
+         %% Controllers %%
+        +pesquisarVenda(id)
+        +novaVenda()
+        +atualizarVenda(id)
+        +deletarVenda(id)
     }
 
     class Produto {
@@ -67,6 +81,7 @@ classDiagram
         -Double precoUnitario
         -String descricao
 
+         %% Controllers %%
         +pesquisarProduto(id)
         +novoProduto()
         +atualizarProduto(id)
