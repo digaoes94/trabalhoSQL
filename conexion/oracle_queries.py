@@ -1,7 +1,8 @@
 ###########################################################################
 # Author: Howard Roatti
+# Adapted: Gabriely, Guilherme, Luiz, Ricardo, Rodrigo
 # Created: 02/09/2022
-# Last Update: 03/09/2022
+# Last Update: 20/10/2025
 #
 # Essa classe auxilia na conexão com o Banco de Dados Oracle
 # Documentação base: 

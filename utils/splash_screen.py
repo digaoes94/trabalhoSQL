@@ -67,6 +67,8 @@ class SplashScreen:
         #
         #  CRIADO POR: {self.created_by}
         #
+        #  ALTERADO POR: GABRIELY, GUILHERME, LUIZ, RICARDO E RODRIGO
+        #
         #  PROFESSOR:  {self.professor}
         #
         #  DISCIPLINA: {self.disciplina}
