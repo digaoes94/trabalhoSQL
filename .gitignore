@@ -1,0 +1,12 @@
+# Cache e arquivos de compilação do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de autenticação sensíveis (NÃO ENVIAR AO GITHUB)
+conexion/passphrase/authentication.oracle
+
+# Ambientes virtuais
+.venv/
+venv/
