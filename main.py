@@ -38,11 +38,11 @@ def menu_principal(cliente_ctrl, fornecedor_ctrl, produto_ctrl, compra_ctrl, ven
             # ii) inserir registros
             menu_inserir(cliente_ctrl, fornecedor_ctrl, produto_ctrl, compra_ctrl, venda_ctrl)
         elif opcao == '3':
-            # iv) atualizar registros
-            menu_atualizar(cliente_ctrl, fornecedor_ctrl, produto_ctrl)
-        elif opcao == '4':
             # iii) remover registros
             menu_remover(cliente_ctrl, fornecedor_ctrl, produto_ctrl)
+        elif opcao == '4':
+            # iv) atualizar registros
+            menu_atualizar(cliente_ctrl, fornecedor_ctrl, produto_ctrl)
         elif opcao == '5':
             # v) sair
             print("saindo do sistema...")

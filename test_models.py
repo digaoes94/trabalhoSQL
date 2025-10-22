@@ -31,13 +31,13 @@ def main():
     fornecedor = Fornecedor(
         id_fornecedor=1,
         cnpj="12.345.678/0001-90",
-        razao_social="Bispo Tech Solutions Ltda",
-        nome_fantasia="BTech Store",
+        razaoSocial="Bispo Tech Solutions Ltda",
+        nomeFantasia="BTech Store",
         endereco=endereco,
         email="guilherme@techstore.com",
-        telefones=["(27) 98855-2967"]
+        telefone=["(27) 98855-2967"]
     )
-    print(f"   {fornecedor.to_string()}\n")
+    print(f"   {fornecedor.to_string()}")
     
     # teste 3: criar cliente
     print("3. testando cliente:")
@@ -47,9 +47,9 @@ def main():
         nome="Guilherme Gonçalves",
         endereco=endereco,
         email="guilherme@gmail.com",
-        telefones=["(27) 98855-2967"]
+        telefone=["(27) 98855-2967"]
     )
-    print(f"   {cliente.to_string()}\n")
+    print(f"   {cliente.to_string()}")
     
     # teste 4: criar produto
     print("4. testando produto:")

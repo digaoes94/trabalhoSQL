@@ -1,15 +1,15 @@
 classDiagram
 
     class Fornecedor {
+        +Integer id_fornecedor
         -String cnpj
         -String razaoSocial
         -String nomeFantasia
         -Endereco endereco
         -String email
-        -String telefone
+        -List telefone
 
-        %% Controllers %%
-        +pesquisarFornecedor(cpf)
+        +pesquisarFornecedor(cnpj)
         +novoFornecedor()
         +atualizarFornecedor(cnpj)
         +deletarFornecedor(cnpj)
@@ -17,35 +17,34 @@ classDiagram
     }
 
     class ItemCompra {
-        -String cnpjFornecedor
+        +Integer id_item_compra
         -Produto produto
         -Integer quantidade
-        -Double precoUnidade
-        -Double subTotal
+        -Double preco_unitario
+        -Double subtotal
+        -Compra compra
     }
 
     class Compra {
-        -Integer id
-        -String cnpjFornecedor
-        -ItemCompra[] itens
+        +Integer id_compra
+        -Fornecedor fornecedor
+        -List itens
         -Date data
         -Double total
 
-         %% Controllers %%
-        +pesquisarCompra(id)
         +novaCompra()
-        +atualizarCompra(id)
-        +deletarCompra(id)
+        +pesquisarCompra(id_compra)
+        +finalizarCompra()
     }
 
     class Cliente {
+        +Integer id_cliente
         -String cpf
         -String nome
         -Endereco endereco
         -String email
-        -String telefone
+        -List telefone
         
-         %% Controllers %%
         +pesquisarCliente(cpf)
         +novoCliente()
         +atualizarCliente(cpf)
@@ -54,43 +53,40 @@ classDiagram
     }
 
     class ItemVenda {
-        -String cpfCliente
+        +Integer id_item_venda
         -Produto produto
         -Integer quantidade
-        -Double precoUnidade
-        -Double subTotal
+        -Double preco_unitario
+        -Double subtotal
+        -Venda venda
     }
 
     class Venda {
-        -Integer id
-        -String cpfCliente
-        -ItemVenda[] itens
+        +Integer id_venda
+        -Cliente cliente
+        -List itens
         -Date data
         -Double total
 
-         %% Controllers %%
-        +pesquisarVenda(id)
         +novaVenda()
-        +atualizarVenda(id)
-        +deletarVenda(id)
+        +pesquisarVenda(id_venda)
+        +finalizarVenda()
     }
 
     class Produto {
-        -Integer id
+        +Integer id_produto
         -String nome
-        -Double precoUnitario
+        -Double preco
         -String descricao
 
-         %% Controllers %%
-        +pesquisarProduto(id)
+        +pesquisarProduto(id_produto)
         +novoProduto()
-        +atualizarProduto(id)
-        +deletarProduto(id)
+        +atualizarProduto(id_produto)
+        +deletarProduto(id_produto)
     }
 
-    %%-- seria interessante criar uma função autoCEP(String cep), mas teríamos de baixar as tabelas de CEP do IBGE --%%
-    %%-- no caso essa função buscaria do CEP da pessoa e completaria automaticamente o Estado, Cidade, Bairro e Logradouro de Endereco  --%%
     class Endereco {
+        +Integer id_endereco
         -String cep
         -String logradouro
         -Integer numero
@@ -98,13 +94,23 @@ classDiagram
         -String bairro
         -String cidade
         -String estado
+        -Integer id_cliente
+        -Integer id_fornecedor
     }
 
-    Fornecedor "1" --> "0..*" Compra
-    Compra "1" --> "1..*" ItemCompra
+    class Estoque {
+        +Integer id_produto
+        -Double custo_unitario
+        -Integer quantidade
+        -Double total
+    }
 
-    Cliente "1" --> "0..*" Venda
-    Venda "1" --> "1..*" ItemVenda
-
-    ItemCompra "1..*" --> "1" Produto
-    ItemVenda "1..*" --> "1" Produto
+    Fornecedor "1" -- "*" Compra : "fornece"
+    Compra "1" -- "*" ItemCompra : "contém"
+    Cliente "1" -- "*" Venda : "realiza"
+    Venda "1" -- "*" ItemVenda : "contém"
+    ItemCompra "*" -- "1" Produto : "refere-se a"
+    ItemVenda "*" -- "1" Produto : "refere-se a"
+    Produto "1" -- "1" Estoque : "tem"
+    Cliente "1" -- "*" Endereco : "possui"
+    Fornecedor "1" -- "*" Endereco : "possui"

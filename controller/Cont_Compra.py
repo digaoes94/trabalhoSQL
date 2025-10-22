@@ -96,23 +96,31 @@ class Cont_Compra:
         oracle.connect()
         
         # 1. Recupera Fornecedor (Você precisará de um Cont_Fornecedor real para isso)
-        # Usando lógica simplificada:
         cnpj_fornecedor = input("CNPJ do Fornecedor para a Compra: ")
-        # Aqui, você idealmente usaria um método de Cont_Fornecedor para buscar o objeto Fornecedor
-        # Ex: fornecedor = self.cont_fornecedor.pesquisarFornecedor(cnpj_fornecedor)
-        # Para simular, criamos um Fornecedor placeholder
-        fornecedor_placeholder = Fornecedor(cnpj=cnpj_fornecedor, razaoSocial="Teste S.A.", nomeFantasia="Teste", endereco=None, email=None, telefone=None)
         
-        if fornecedor_placeholder.cnpj != cnpj_fornecedor: # Simulação de falha na busca
+        # Busca o id_fornecedor baseado no CNPJ
+        query_fornecedor = f"SELECT id_fornecedor, nome, cnpj FROM fornecedores WHERE cnpj = '{cnpj_fornecedor}'"
+        df_fornecedor = oracle.sqlToDataFrame(query_fornecedor)
+
+        if df_fornecedor.empty:
             print(f"Fornecedor de CNPJ {cnpj_fornecedor} não encontrado.")
             return None
+        
+        fornecedor_data = df_fornecedor.iloc[0]
+        fornecedor_obj = Fornecedor(
+            id_fornecedor=int(fornecedor_data["id_fornecedor"]),
+            cnpj=fornecedor_data["cnpj"],
+            razaoSocial=fornecedor_data["nome"], # Assumindo que 'nome' é a razão social
+            nomeFantasia=fornecedor_data["nome"], # Assumindo que 'nome' é o nome fantasia
+            endereco=None, email=None, telefone=None
+        )
 
         # 2. Gera ID e Data
         id_compra = self._get_next_id(oracle)
         data_compra = date.today()
         
         # 3. Cria o objeto Compra inicial
-        nova_compra = Compra(id_compra=id_compra, fornecedor=fornecedor_placeholder, data=data_compra, total=0.0)
+        nova_compra = Compra(id_compra=id_compra, fornecedor=fornecedor_obj, data=data_compra, total=0.0)
         
         # 4. Adiciona Itens (loop)
         print("\n--- Adicionar Itens à Compra ---")
@@ -175,8 +183,8 @@ class Cont_Compra:
         
         # 1. Persiste a Compra principal
         sql_compra = f"""
-            INSERT INTO compras (id_compra, cnpj_fornecedor, data, total) 
-            VALUES ({compra.id_compra}, '{compra.fornecedor.cnpj}', DATE '{compra.data}', {compra.total})
+            INSERT INTO compras (id_compra, id_fornecedor, data_compra, valor_total) 
+            VALUES ({compra.id_compra}, {compra.fornecedor.id_fornecedor}, DATE '{compra.data}', {compra.total})
         """
         oracle.write(sql_compra)
         print("-> Compra persistida na tabela COMPRAS.")
@@ -209,11 +217,11 @@ class Cont_Compra:
         # Query para buscar a compra e todos os seus itens
         query_compra = f"""
             SELECT 
-                c.id_compra, c.data, c.total, c.cnpj_fornecedor, 
-                ic.quantidade, ic.preco_unitario, ic.subtotal, 
+                c.id_compra, c.data_compra, c.valor_total, c.id_fornecedor, 
+                ic.quantidade, ic.preco_unitario_compra, ic.subtotal, 
                 p.id_produto, p.nome as nome_produto
             FROM compras c
-            INNER JOIN itemcompras ic ON c.id_compra = ic.id_compra
+            INNER JOIN item_compra ic ON c.id_compra = ic.id_compra
             INNER JOIN produtos p ON ic.id_produto = p.id_produto
             WHERE c.id_compra = {id_compra}
         """
@@ -227,14 +235,23 @@ class Cont_Compra:
         # Reconstroi o objeto Compra
         compra_data = df_compra.iloc[0]
         
-        # Necessita de um Cont_Fornecedor para buscar o Fornecedor completo, mas vamos simplificar
-        fornecedor_placeholder = Fornecedor(cnpj=compra_data["cnpj_fornecedor"], razaoSocial="N/A", nomeFantasia="N/A", endereco=None, email=None, telefone=None)
+        # Busca o Fornecedor completo para a Compra
+        query_fornecedor = f"SELECT id_fornecedor, cnpj, nome FROM fornecedores WHERE id_fornecedor = {compra_data["id_fornecedor"]}"
+        df_fornecedor = oracle.sqlToDataFrame(query_fornecedor)
+        fornecedor_data = df_fornecedor.iloc[0]
+        fornecedor_obj = Fornecedor(
+            id_fornecedor=int(fornecedor_data["id_fornecedor"]),
+            cnpj=fornecedor_data["cnpj"],
+            razaoSocial=fornecedor_data["nome"],
+            nomeFantasia=fornecedor_data["nome"],
+            endereco=None, email=None, telefone=None
+        )
         
         compra_recuperada = Compra(
             id_compra=int(compra_data["id_compra"]),
-            fornecedor=fornecedor_placeholder,
-            data=compra_data["data"],
-            total=float(compra_data["total"])
+            fornecedor=fornecedor_obj,
+            data=compra_data["data_compra"],
+            total=float(compra_data["valor_total"])
         )
         
         itens = []

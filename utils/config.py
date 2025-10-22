@@ -1,8 +1,8 @@
 MENU_PRINCIPAL = """Menu Principal
 1 - Relatórios
 2 - Inserir Registros
-3 - Atualizar Registros
-4 - Remover Registros
+3 - Remover Registros
+4 - Atualizar Registros
 5 - Sair
 """
 
@@ -20,8 +20,8 @@ MENU_ENTIDADES = """Entidades
 1 - PRODUTOS
 2 - CLIENTES
 3 - FORNECEDORES
-4 - PEDIDOS
-5 - ITENS DE PEDIDOS
+4 - VENDAS
+5 - ITENS DE VENDA
 """
 
 # Consulta de contagem de registros por tabela

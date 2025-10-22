@@ -90,19 +90,29 @@ class Cont_Venda:
         
         # 1. Recupera Cliente
         cpf_cliente = input("CPF do Cliente para a Venda: ")
-        # Simulação de busca do Cliente
-        cliente_placeholder = Cliente(cpf=cpf_cliente, nome="Cliente Teste", endereco=None, email=None, telefone=None)
         
-        if cliente_placeholder.cpf != cpf_cliente:
+        # Busca o id_cliente baseado no CPF
+        query_cliente = f"SELECT id_cliente, nome, cpf FROM clientes WHERE cpf = '{cpf_cliente}'"
+        df_cliente = oracle.sqlToDataFrame(query_cliente)
+
+        if df_cliente.empty:
             print(f"Cliente de CPF {cpf_cliente} não encontrado.")
             return None
+        
+        cliente_data = df_cliente.iloc[0]
+        cliente_obj = Cliente(
+            id_cliente=int(cliente_data["id_cliente"]),
+            cpf=cliente_data["cpf"],
+            nome=cliente_data["nome"],
+            endereco=None, email=None, telefone=None
+        )
 
         # 2. Gera ID e Data
         id_venda = self._get_next_id(oracle)
         data_venda = date.today()
         
         # 3. Cria o objeto Venda inicial
-        nova_venda = Venda(id_venda=id_venda, cliente=cliente_placeholder, data=data_venda, total=0.0)
+        nova_venda = Venda(id_venda=id_venda, cliente=cliente_obj, data=data_venda, total=0.0)
         
         # 4. Adiciona Itens (loop)
         print("\n--- Adicionar Itens à Venda ---")
@@ -181,8 +191,8 @@ class Cont_Venda:
         
         # 1. Persiste a Venda principal
         sql_venda = f"""
-            INSERT INTO vendas (id_venda, cpf_cliente, data, total) 
-            VALUES ({venda.id_venda}, '{venda.cliente.cpf}', DATE '{venda.data}', {venda.total})
+            INSERT INTO vendas (id_venda, id_cliente, data_venda, valor_total) 
+            VALUES ({venda.id_venda}, {venda.cliente.id_cliente}, DATE '{venda.data}', {venda.total})
         """
         oracle.write(sql_venda)
         print("-> Venda persistida na tabela VENDAS.")
@@ -220,11 +230,11 @@ class Cont_Venda:
         # Query para buscar a venda e todos os seus itens
         query_venda = f"""
             SELECT 
-                v.id_venda, v.data, v.total, v.cpf_cliente, 
-                iv.quantidade, iv.preco_unitario, iv.subtotal, 
+                v.id_venda, v.data_venda, v.valor_total, v.id_cliente, 
+                iv.quantidade, iv.preco_unitario_venda, iv.subtotal, 
                 p.id_produto, p.nome as nome_produto
             FROM vendas v
-            INNER JOIN itemvendas iv ON v.id_venda = iv.id_venda
+            INNER JOIN item_venda iv ON v.id_venda = iv.id_venda
             INNER JOIN produtos p ON iv.id_produto = p.id_produto
             WHERE v.id_venda = {id_venda}
         """
@@ -238,14 +248,22 @@ class Cont_Venda:
         # Reconstroi o objeto Venda
         venda_data = df_venda.iloc[0]
         
-        # Necessita de um Cont_Cliente para buscar o Cliente completo, mas vamos simplificar
-        cliente_placeholder = Cliente(cpf=venda_data["cpf_cliente"], nome="N/A", endereco=None, email=None, telefone=None)
+        # Busca o Cliente completo para a Venda
+        query_cliente = f"SELECT id_cliente, cpf, nome FROM clientes WHERE id_cliente = {venda_data["id_cliente"]}"
+        df_cliente = oracle.sqlToDataFrame(query_cliente)
+        cliente_data = df_cliente.iloc[0]
+        cliente_obj = Cliente(
+            id_cliente=int(cliente_data["id_cliente"]),
+            cpf=cliente_data["cpf"],
+            nome=cliente_data["nome"],
+            endereco=None, email=None, telefone=None
+        )
         
         venda_recuperada = Venda(
             id_venda=int(venda_data["id_venda"]),
-            cliente=cliente_placeholder,
-            data=venda_data["data"],
-            total=float(venda_data["total"])
+            cliente=cliente_obj,
+            data=venda_data["data_venda"],
+            total=float(venda_data["valor_total"])
         )
         
         itens = []

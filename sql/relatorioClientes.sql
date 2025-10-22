@@ -1,2 +1,4 @@
-SELECT * FROM clientes c
-ORDER BY c.nome
+select c.cpf
+     , c.nome 
+  from clientes c
+ order by c.nome

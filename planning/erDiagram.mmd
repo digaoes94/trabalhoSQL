@@ -1,75 +1,86 @@
 erDiagram
-    FORNECEDOR {
-        VARCHAR2 cnpj PK "Not Null"
-        VARCHAR2 razao_social "Not Null"
-        VARCHAR2 nome_fantasia "Null or Not Null"
-        ENDERECO Endereco "Null or Not Null"
-        VARCHAR2 email "Null or Not Null"
-        VARCHAR2 telefone "Null or Not Null"
+    clientes {
+        NUMBER id_cliente PK
+        VARCHAR2 cpf UK "UNIQUE NOT NULL"
+        VARCHAR2 nome "NOT NULL"
+        VARCHAR2 email
+        VARCHAR2 telefone
     }
 
-    ITEM_COMPRA {
-        VARCHAR2 CNPJ_FORNECEDOR PK "Not Null"
-        PRODUTO produto PK "Not Null"
-        NUMBER quantidade "Not Null"
-        NUMBER precoUnidade "Not Null"
-        NUMBER subTotal "Not Null"
+    fornecedores {
+        NUMBER id_fornecedor PK
+        VARCHAR2 nome "NOT NULL"
+        VARCHAR2 cnpj UK "UNIQUE NOT NULL"
+        VARCHAR2 telefone
+        VARCHAR2 email
     }
 
-    COMPRA {
-        NUMBER id PK "Not Null"
-        VARCHAR2 CNPJ_FORNECEDOR FK "Not Null"
-        ITEM_COMPRA[] itens "Not Null"
-        DATE data "Null or Not Null"
-        NUMBER total "Not Null"
+    enderecos {
+        NUMBER id_endereco PK
+        VARCHAR2 cep "NOT NULL"
+        VARCHAR2 logradouro "NOT NULL"
+        NUMBER numero
+        VARCHAR2 complemento
+        VARCHAR2 bairro
+        VARCHAR2 cidade
+        VARCHAR2 estado
+        NUMBER id_cliente FK
+        NUMBER id_fornecedor FK
     }
 
-    CLIENTE {
-        VARCHAR2 cpf PK "Not Null"
-        VARCHAR2 nome "Not Null"
-        ENDERECO Endereco "Null or Not Null"
-        VARCHAR2 email "Null or Not Null"
-        VARCHAR2 telefone "Null or Not Null"
+    produtos {
+        NUMBER id_produto PK
+        VARCHAR2 nome "NOT NULL"
+        VARCHAR2 descricao
+        NUMBER preco_unitario "NOT NULL"
+        NUMBER qtde_estoque "DEFAULT 0"
     }
 
-    ITEM_VENDA {
-        NUMBER CPF_CLIENTE PK "Not Null"
-        PRODUTO produto PK "Not Null"
-        NUMBER quantidade "Not Null"
-        NUMBER precoUnidade "Not Null"
-        NUMBER subTotal "Not Null"
+    estoque {
+        NUMBER id_produto PK,FK
+        NUMBER custo_unitario "NOT NULL"
+        NUMBER quantidade "NOT NULL"
+        NUMBER total "NOT NULL"
     }
 
-    VENDA {
-        NUMBER id PK "Not Null"
-        NUMBER CPF_CLIENTE FK "Not Null"
-        ITEM_VENDA[] itens "Not Null"
-        DATE data "Null or Not Null"
-        NUMBER total "Not Null"
+    vendas {
+        NUMBER id_venda PK
+        DATE data_venda "NOT NULL"
+        NUMBER valor_total
+        NUMBER id_cliente FK
     }
 
-    PRODUTO {
-        NUMBER id PK "Not Null"
-        VARCHAR2 nome "Not Null"
-        NUMBER preco "Not Null"
-        VARCHAR2 descricao "Null or Not Null"
+    compras {
+        NUMBER id_compra PK
+        DATE data_compra "NOT NULL"
+        NUMBER valor_total
+        NUMBER id_fornecedor FK
     }
 
-    ENDERECO {
-        VARCHAR2 cep "Null or Not Null"
-        VARCHAR2 logradouro "Null or Not Null"
-        NUMBER numero "Null or Not Null"
-        VARCHAR2 complemento "Null or Not Null"
-        VARCHAR2 bairro "Null or Not Null"
-        VARCHAR2 cidade "Null or Not Null"
-        VARCHAR2 estado "Null or Not Null"
+    item_venda {
+        NUMBER id_item_venda PK
+        NUMBER id_venda FK "NOT NULL"
+        NUMBER id_produto FK "NOT NULL"
+        NUMBER quantidade "NOT NULL"
+        NUMBER preco_unitario_venda "NOT NULL"
+        NUMBER subtotal
     }
 
-    FORNECEDOR ||--|{ COMPRA : "compramos de"
-    COMPRA ||--|{ ITEM_COMPRA : "compõem"
+    item_compra {
+        NUMBER id_item_compra PK
+        NUMBER id_compra FK "NOT NULL"
+        NUMBER id_produto FK "NOT NULL"
+        NUMBER quantidade "NOT NULL"
+        NUMBER preco_unitario_compra "NOT NULL"
+        NUMBER subtotal
+    }
 
-    CLIENTE ||--O{ VENDA : "vendemos para"
-    VENDA ||--|{ ITEM_VENDA : "compõem"
-
-    ITEM_COMPRA }|--|| PRODUTO : "compõem"
-    ITEM_VENDA }|--|| PRODUTO : "compõem"
+    clientes ||--o{ enderecos : "possui"
+    fornecedores ||--o{ enderecos : "possui"
+    clientes ||--o{ vendas : "realiza"
+    fornecedores ||--o{ compras : "fornece"
+    produtos ||--|| estoque : "tem"
+    vendas ||--o{ item_venda : "contém"
+    produtos ||--o{ item_venda : "está em"
+    compras ||--o{ item_compra : "contém"
+    produtos ||--o{ item_compra : "está em"

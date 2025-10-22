@@ -17,10 +17,10 @@ class Cont_Cliente:
         # Assumindo que a tabela CLIENTES e ENDERECOS estão ligadas por uma chave (ex: cpf_cliente = cpf)
         query = f"""
             SELECT 
-                c.cpf, c.nome, c.email, c.telefone, 
+                c.id_cliente, c.cpf, c.nome, c.email, c.telefone, 
                 e.cep, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.estado 
             FROM clientes c 
-            INNER JOIN enderecos e ON c.cpf = e.cpf_cliente 
+            INNER JOIN enderecos e ON c.id_cliente = e.id_cliente 
             WHERE c.cpf = '{cpf}'
         """
         
@@ -48,6 +48,7 @@ class Cont_Cliente:
             telefone_lista = [cliente_data["telefone"]] if pd.notna(cliente_data["telefone"]) else []
             
             cliente = Cliente(
+                id_cliente=int(cliente_data["id_cliente"]),
                 cpf=cliente_data["cpf"],
                 nome=cliente_data["nome"],
                 endereco=endereco,
@@ -112,20 +113,24 @@ class Cont_Cliente:
             cidade = input("Cidade: ")
             estado = input("Estado (UF): ")
             
-            # 1. Insere e persiste o novo Endereço (tabela dependente)
-            # O campo 'cpf_cliente' é a chave de ligação
-            sql_endereco = f"""
-                INSERT INTO enderecos (cep, logradouro, numero, complemento, bairro, cidade, estado, cpf_cliente) 
-                VALUES ('{cep}', '{logradouro}', {int(numero)}, '{complemento}', '{bairro}', '{cidade}', '{estado}', '{cpf}')
-            """
-            oracle.write(sql_endereco)
-
             # 2. Insere e persiste o novo Cliente
             sql_cliente = f"""
                 INSERT INTO clientes (cpf, nome, email, telefone) 
                 VALUES ('{cpf}', '{nome}', '{email}', '{telefone_str}')
             """
             oracle.write(sql_cliente)
+
+            # Recupera o ID do cliente recém-inserido
+            query_id_cliente = "SELECT clientes_id_seq.CURRVAL AS id_cliente FROM DUAL"
+            df_id_cliente = oracle.sqlToDataFrame(query_id_cliente)
+            id_cliente_gerado = int(df_id_cliente.id_cliente.values[0])
+
+            # 1. Insere e persiste o novo Endereço (tabela dependente)
+            sql_endereco = f"""
+                INSERT INTO enderecos (cep, logradouro, numero, complemento, bairro, cidade, estado, id_cliente) 
+                VALUES ('{cep}', '{logradouro}', {int(numero)}, '{complemento}', '{bairro}', '{cidade}', '{estado}', {id_cliente_gerado})
+            """
+            oracle.write(sql_endereco)
 
             # 3. Recupera o objeto Cliente completo para retorno
             novo_cliente = self._recupera_cliente(oracle, cpf)
@@ -180,7 +185,7 @@ class Cont_Cliente:
             sql_update_endereco = f"""
                 UPDATE enderecos 
                 SET logradouro = '{novo_logradouro}', numero = {int(novo_numero)}
-                WHERE cpf_cliente = '{cpf}'
+                WHERE id_cliente = {cliente_existente.id_cliente}
             """
             oracle.write(sql_update_endereco)
             
@@ -207,7 +212,7 @@ class Cont_Cliente:
             cliente_excluido = self._recupera_cliente(oracle, cpf)
             
             # 1. Deleta Endereço (tabela dependente)
-            sql_del_endereco = f"DELETE FROM enderecos WHERE cpf_cliente = '{cpf}'"
+            sql_del_endereco = f"DELETE FROM enderecos WHERE id_cliente = {cliente_excluido.id_cliente}"
             oracle.write(sql_del_endereco)
             
             # 2. Deleta Cliente (tabela principal)
@@ -228,16 +233,17 @@ class Cont_Cliente:
         if self.verifica_existencia_cliente(oracle, cpf):
             print(f"O CPF {cpf} não existe.")
         else:
+            cliente = self._recupera_cliente(oracle, cpf) # Recupera o objeto cliente
             # Busca as vendas (pedidos) do cliente com seus itens.
             query_pedidos = f"""
                 SELECT 
-                    v.data, v.id_venda, p.nome as nome_produto, 
-                    iv.preco_unitario as preco_unitario_venda, iv.quantidade, iv.subtotal
+                    v.data_venda, v.id_venda, p.nome as nome_produto, 
+                    iv.preco_unitario_venda, iv.quantidade, iv.subtotal
                 FROM vendas v
-                INNER JOIN itemvendas iv ON v.id_venda = iv.id_venda
+                INNER JOIN item_venda iv ON v.id_venda = iv.id_venda
                 INNER JOIN produtos p ON iv.id_produto = p.id_produto
-                WHERE v.cpf_cliente = '{cpf}'
-                ORDER BY v.data, v.id_venda
+                WHERE v.id_cliente = {cliente.id_cliente}
+                ORDER BY v.data_venda, v.id_venda
             """
             
             df_pedidos = oracle.sqlToDataFrame(query_pedidos)

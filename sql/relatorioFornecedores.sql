@@ -1,2 +1,4 @@
-SELECT f.cnpj, f.razaoSocial, f.nomeFantasia FROM fornecedores f
-ORDER BY f.razaoSocial
+select f.cnpj
+     , f.nome as nome_fornecedor
+  from fornecedores f
+ order by f.nome
