@@ -13,10 +13,10 @@ class SplashScreen:
         # Consultas de contagem de registros - fim
 
         # Nome(s) do(s) criador(es)
-        self.created_by = "GABRIELY, GUILHERME, LUIZ, RICARDO E RODRIGO"
+        self.created_by = "HOWARD ROATTI"
         self.professor = "Prof. M.Sc. Howard Roatti"
         self.disciplina = "Banco de Dados"
-        self.semestre = "2022/2"
+        self.semestre = "2025/2"
 
     def get_total_produtos(self):
         # Cria uma nova conexão com o banco que permite alteração

@@ -17,7 +17,7 @@ def create_tables(query:str):
 
 def run():
 
-    with open("..\sql\create_tables.sql", "r") as f:
+    with open("sql/create_tables.sql", "r") as f:
         query_create = f.read()
 
     print("Creating tables...")
