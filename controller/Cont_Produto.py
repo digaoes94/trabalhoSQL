@@ -102,10 +102,10 @@ class Cont_Produto:
                 
             descricao = input("Descrição: ")
             
-            # Insere e persiste o novo Produto
+            # Insere e persiste o novo Produto (usando sequence)
             sql_produto = f"""
                 INSERT INTO produtos (id_produto, nome, preco_unitario, descricao) 
-                VALUES ({id_produto}, '{nome}', {preco_float}, '{descricao}')
+                VALUES (produtos_id_seq.NEXTVAL, '{nome}', {preco_float}, '{descricao}')
             """
             oracle.write(sql_produto)
 

@@ -45,10 +45,10 @@ def menu_principal(cliente_ctrl, fornecedor_ctrl, produto_ctrl, compra_ctrl, ven
             menu_atualizar(cliente_ctrl, fornecedor_ctrl, produto_ctrl)
         elif opcao == '5':
             # v) sair
-            print("saindo do sistema...")
+            print("👋 Saindo do sistema... Até logo!")
             break
         else:
-            print("opção inválida. tente novamente.")
+            print("❌ Opção inválida! Tente novamente.")
             clear_console(1)
 
 # aqui ficam as opções de relatório conforme views/relatorios.py e sql
@@ -56,8 +56,17 @@ def menu_relatorios(relatorio):
     # o menu precisa ficar constante 
     while True:
         clear_console(1)
-        print("relatórios disponíveis:")
-        print("1 - clientes\n2 - compras\n3 - estoque\n4 - fornecedores\n5 - produtos\n6 - vendas\n0 - voltar")
+        print("=" * 60)
+        print("📊 RELATÓRIOS DISPONÍVEIS")
+        print("=" * 60)
+        print("1 - 👤 Clientes")
+        print("2 - 🛒 Compras") 
+        print("3 - 📦 Estoque")
+        print("4 - 🏢 Fornecedores")
+        print("5 - 📦 Produtos")
+        print("6 - 💰 Vendas")
+        print("0 - ⬅️  Voltar")
+        print("=" * 60)
         op = input("escolha o relatório (0 para voltar): ")
         
         if op == '1':
@@ -76,7 +85,7 @@ def menu_relatorios(relatorio):
         elif op == '0':
             break # volta pro menu principal
         else:
-            print("opção inválida.")
+            print("❌ Opção inválida!")
         
         input("\npressione enter para continuar...")
 
@@ -86,8 +95,16 @@ def menu_inserir(cliente_ctrl, fornecedor_ctrl, produto_ctrl, compra_ctrl, venda
     # o menu precisa ficar constante 
     while True:
         clear_console(1)
-        print("inserção de registros:")
-        print("1 - clientes\n2 - fornecedores\n3 - produtos\n4 - compras\n5 - vendas\n0 - voltar")
+        print("=" * 60)
+        print("➕ INSERÇÃO DE REGISTROS")
+        print("=" * 60)
+        print("1 - 👤 Clientes")
+        print("2 - 🏢 Fornecedores")
+        print("3 - 📦 Produtos")
+        print("4 - 🛒 Compras")
+        print("5 - 💰 Vendas")
+        print("0 - ⬅️  Voltar")
+        print("=" * 60)
         op = input("selecione (0 para voltar): ")
 
         if op == '1':
@@ -103,7 +120,7 @@ def menu_inserir(cliente_ctrl, fornecedor_ctrl, produto_ctrl, compra_ctrl, venda
         elif op == '0':
             break # volta pro menu principal
         else:
-            print("opção inválida.")
+            print("❌ Opção inválida!")
         
         # o edital pede pra perguntar se quer inserir mais [cite: 210-211], o loop ja faz isso
         input("\npressione enter para continuar...")
@@ -114,8 +131,14 @@ def menu_atualizar(cliente_ctrl, fornecedor_ctrl, produto_ctrl):
     # o menu precisa ficar constante 
     while True:
         clear_console(1)
-        print("atualização de registros:")
-        print("1 - clientes\n2 - fornecedores\n3 - produtos\n0 - voltar")
+        print("=" * 60)
+        print("✏️  ATUALIZAÇÃO DE REGISTROS")
+        print("=" * 60)
+        print("1 - 👤 Clientes")
+        print("2 - 🏢 Fornecedores")
+        print("3 - 📦 Produtos")
+        print("0 - ⬅️  Voltar")
+        print("=" * 60)
         op = input("selecione (0 para voltar): ")
 
         if op == '1':
@@ -127,7 +150,7 @@ def menu_atualizar(cliente_ctrl, fornecedor_ctrl, produto_ctrl):
         elif op == '0':
             break # volta pro menu principal
         else:
-            print("opção inválida.")
+            print("❌ Opção inválida!")
 
         input("\npressione enter para continuar...")
 
@@ -137,8 +160,14 @@ def menu_remover(cliente_ctrl, fornecedor_ctrl, produto_ctrl):
     # o menu precisa ficar constante 
     while True:
         clear_console(1)
-        print("remoção de registros:")
-        print("1 - clientes\n2 - fornecedores\n3 - produtos\n0 - voltar")
+        print("=" * 60)
+        print("🗑️  REMOÇÃO DE REGISTROS")
+        print("=" * 60)
+        print("1 - 👤 Clientes")
+        print("2 - 🏢 Fornecedores")
+        print("3 - 📦 Produtos")
+        print("0 - ⬅️  Voltar")
+        print("=" * 60)
         op = input("selecione (0 para voltar): ")
 
         if op == '1':
@@ -150,7 +179,7 @@ def menu_remover(cliente_ctrl, fornecedor_ctrl, produto_ctrl):
         elif op == '0':
             break # volta pro menu principal
         else:
-            print("opção inválida.")
+            print("❌ Opção inválida!")
         
         input("\npressione enter para continuar...")
 

@@ -1,10 +1,12 @@
-MENU_PRINCIPAL = """Menu Principal
-1 - Relatórios
-2 - Inserir Registros
-3 - Remover Registros
-4 - Atualizar Registros
-5 - Sair
-"""
+MENU_PRINCIPAL = """============================================================
+🏪 SISTEMA DE GESTÃO DE VENDAS
+============================================================
+1 - 📊 Relatórios
+2 - ➕ Inserir Registros
+3 - 🗑️  Remover Registros
+4 - ✏️  Atualizar Registros
+5 - 🚪 Sair
+============================================================"""
 
 MENU_RELATORIOS = """Relatórios
 1 - Relatório de Pedidos por Fornecedores

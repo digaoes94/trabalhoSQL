@@ -118,10 +118,10 @@ class Cont_Fornecedor:
             endereco = Endereco(cep, logradouro, int(numero), complemento, bairro, cidade, estado)
             novo_fornecedor = Fornecedor(cnpj, razao_social, nome_fantasia, endereco, email, [telefone_str])
 
-            # 2. Insere e persiste o novo Fornecedor
+            # 2. Insere e persiste o novo Fornecedor (usando sequence)
             sql_fornecedor = f"""
-                INSERT INTO fornecedores (cnpj, razaoSocial, nomeFantasia, email, telefone) 
-                VALUES ('{cnpj}', '{razao_social}', '{nome_fantasia}', '{email}', '{telefone_str}')
+                INSERT INTO fornecedores (id_fornecedor, cnpj, razaoSocial, nomeFantasia, email, telefone) 
+                VALUES (fornecedores_id_seq.NEXTVAL, '{cnpj}', '{razao_social}', '{nome_fantasia}', '{email}', '{telefone_str}')
             """
             oracle.write(sql_fornecedor)
 

@@ -408,27 +408,117 @@ pip install -r requirements.txt
 
 ---
 
-## ⚡ Resumo Rápido
+## 🚀 Guia Completo - Do Zero ao Sistema Funcionando
 
-Se você só quer rodar o sistema rapidamente:
+### **PASSO 1: Preparar o Ambiente**
 
 ```bash
-# 1. clona e entra na pasta
+# 1. Clona o repositório
 git clone https://github.com/digaoes94/trabalhoSQL.git
 cd trabalhoSQL
 
-# 2. configura o ambiente
+# 2. Cria o ambiente virtual
+python3 -m venv venv
+
+# 3. Ativa o ambiente virtual
+source venv/bin/activate  # Linux/Mac
+# ou
+venv\Scripts\activate     # Windows
+
+# 4. Instala as dependências
+pip install -r requirements.txt
+```
+
+### **PASSO 2: Configurar o Banco de Dados**
+
+#### **Opção A: Docker (Recomendado)**
+```bash
+# Sobe o Oracle no Docker
+docker run -d --name oracle-db -p 1521:1521 -e ORACLE_PASSWORD=oracle gvenzl/oracle-xe:21-slim-faststart
+
+# Aguarda 2-3 minutos para o Oracle inicializar
+# Verifica se está rodando: docker ps
+```
+
+#### **Opção B: Oracle Local**
+- Instala o Oracle Database XE
+- Configura o serviço XEPDB1
+- Cria usuário system com senha oracle
+
+### **PASSO 3: Criar as Tabelas**
+
+```bash
+# IMPORTANTE: Execute este comando para criar todas as tabelas
+python3 -c "import sys; sys.path.append('.'); from db_setup.run_db_setup import run; run()"
+```
+
+**O que este comando faz:**
+- 🗑️ Remove tabelas antigas (se existirem)
+- ➕ Cria todas as sequences
+- ➕ Cria todas as tabelas (clientes, produtos, fornecedores, etc.)
+- ✅ Sistema pronto para uso
+
+### **PASSO 4: Executar o Sistema**
+
+```bash
+# Roda o sistema principal
+python3 main.py
+```
+
+**O que vai aparecer:**
+- 🎨 **Splash screen** com informações do projeto
+- 📊 **Contadores** de registros (inicialmente 0)
+- 🎛️ **Menu principal** com 5 opções
+
+### **PASSO 5: Usar o Sistema**
+
+```
+Menu Principal
+1 - Relatórios
+2 - Inserir Registros  
+3 - Remover Registros
+4 - Atualizar Registros
+5 - Sair
+```
+
+**Navegação:**
+- Digite o número da opção (1-5)
+- Siga os submenus
+- Use 0 para voltar
+- Use 5 para sair
+
+### **PASSO 6: Testar Funcionalidades**
+
+1. **Inserir um cliente:**
+   - Menu → 2 → 1
+   - Preencha os dados
+   - Confirme a inserção
+
+2. **Ver relatórios:**
+   - Menu → 1 → 1 (Relatório de Clientes)
+   - Veja os dados inseridos
+
+3. **Inserir produtos e vendas:**
+   - Menu → 2 → 3 (Produtos)
+   - Menu → 2 → 5 (Vendas)
+
+## 🎯 **Sequência Completa (Copy & Paste)**
+
+```bash
+# 1. Clona e configura
+git clone https://github.com/digaoes94/trabalhoSQL.git
+cd trabalhoSQL
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# 3. sobe o oracle (se tiver docker)
+# 2. Sobe o Oracle
 docker run -d --name oracle-db -p 1521:1521 -e ORACLE_PASSWORD=oracle gvenzl/oracle-xe:21-slim-faststart
 
-# 4. aguarda 2-3 minutos e cria as tabelas
+# 3. Aguarda 2-3 minutos e cria as tabelas
 python3 -c "import sys; sys.path.append('.'); from db_setup.run_db_setup import run; run()"
 
-# 5. roda o sistema
+# 4. Roda o sistema
 python3 main.py
 ```
 
