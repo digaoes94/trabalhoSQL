@@ -1,25 +1,7 @@
 services:
-  oracle-db:
-    image: gvenzl/oracle-free:latest
-    ports:
-      - "1521:1521"
-    environment:
-      - ORACLE_PASSWORD=Trabalho204012
-    volumes:
-      - oracle_data:/opt/oracle/oradata
-    healthcheck:
-      test: ["CMD", "oraping", "-d", "FREEPBD1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-
   app:
     build: .
-    depends_on:
-      oracle-db:
-        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - .:/app
-
-volumes:
-  oracle_data:
