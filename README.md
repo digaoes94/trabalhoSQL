@@ -54,7 +54,7 @@ Com a nova estrutura, você só precisa do Docker e Docker Compose instalados pa
 
 2.  **Suba os serviços com Docker Compose:**
     ```bash
-    docker-compose up --build
+docker compose
     ```
     - O comando `--build` garante que a imagem da aplicação será construída.
     - O Oracle Database pode levar alguns minutos para inicializar completamente. Você verá logs de ambos os serviços no seu terminal.
