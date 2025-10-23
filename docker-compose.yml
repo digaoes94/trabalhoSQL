@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   oracle-db:
     image: gvenzl/oracle-free:latest
@@ -8,11 +7,17 @@ services:
       - ORACLE_PASSWORD=Trabalho204012
     volumes:
       - oracle_data:/opt/oracle/oradata
+    healthcheck:
+      test: ["CMD", "oraping", "-d", "FREEPBD1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   app:
     build: .
     depends_on:
-      - oracle-db
+      oracle-db:
+        condition: service_healthy
     volumes:
       - .:/app
 
