@@ -5,4 +5,3 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - .:/app
-    command: ["tail", "-f", "/dev/null"]

@@ -15,7 +15,7 @@ Este projeto foi reconfigurado para rodar a aplicação Python em um contêiner 
 
 1.  **Docker e Docker Compose** instalados.
 2.  Um **contêiner Oracle Database rodando**. O projeto está configurado para usar:
-    -   **Imagem:** `container-registry.oracle.com/database/free:latest` (a que você já usa, `oracle-23ai-free`).
+    -   **Imagem Sugerida:** `container-registry.oracle.com/database/free:latest` (a que você já usa, `oracle-23ai-free`).
     -   **Porta Exposta:** A porta `1521` do contêiner deve estar mapeada para a porta `1521` da sua máquina.
 
 ---
@@ -34,32 +34,31 @@ O arquivo `conexion/passphrase/authentication.oracle` contém o usuário e a sen
 
 ## 🚀 Como Executar
 
-O processo agora é muito mais simples.
+O processo é feito com comandos diretos do `docker compose` no seu terminal.
 
 **1. Garanta que seu contêiner Oracle (`oracle-23ai-free`) esteja rodando.**
 
 **2. Inicie a aplicação Python:**
-Na pasta do projeto (`~/projeto/trabalhoSQL`), execute:
+Na pasta do projeto (`~/projeto/trabalhoSQL`), execute o comando para construir a imagem e iniciar o contêiner em segundo plano:
 ```bash
-./scripts/setup.sh
+docker compose up --build -d
 ```
-Este comando irá construir a imagem da aplicação e iniciá-la em segundo plano.
 
 **3. Crie as Tabelas (se for a primeira vez):**
-Com a aplicação rodando, abra outro terminal e execute:
+Com a aplicação rodando, execute o comando para criar a estrutura do banco:
 ```bash
-./scripts/create_tables.sh
+docker compose exec app python -c "from db_setup.run_db_setup import run; run()"
 ```
 
 **4. Use o Sistema:**
-Para ver o menu e interagir com o programa, execute:
+Para ver o menu e interagir com o programa, veja os logs do contêiner:
 ```bash
-./scripts/logs.sh
+docker compose logs -f app
 ```
 
 **5. Para Desligar a Aplicação:**
-Quando terminar, para desligar apenas o contêiner da aplicação, execute:
+Quando terminar, para desligar o contêiner da aplicação, execute:
 ```bash
-./scripts/stop.sh
+docker compose down
 ```
 *(Isso não irá parar o seu contêiner do banco de dados `oracle-23ai-free`.)*
