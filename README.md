@@ -1,64 +1,52 @@
-# 🏪 Sistema de Vendas - Oracle Database
+# 🏪 Sistema de Vendas - Oracle Database com Docker
 
-> Sistema de gerenciamento de vendas que roda em Docker e se conecta a um banco de dados Oracle existente na máquina host.
+> Ambiente de desenvolvimento completo e autocontido, utilizando Docker Compose para orquestrar a aplicação Python e o banco de dados Oracle.
 
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue.svg)](https://docs.docker.com/compose/)
 
 ---
 
-## ⚠️ Arquitetura e Pré-requisitos
-
-Este projeto foi reconfigurado para rodar a aplicação Python em um contêiner Docker que se conecta a um banco de dados Oracle **já existente e rodando na sua máquina (host)**.
-
-**Antes de iniciar, você PRECISA ter:**
-
-1.  **Docker e Docker Compose** instalados.
-2.  Um **contêiner Oracle Database rodando**. O projeto está configurado para usar:
-    -   **Imagem Sugerida:** `container-registry.oracle.com/database/free:latest` (a que você já usa, `oracle-23ai-free`).
-    -   **Porta Exposta:** A porta `1521` do contêiner deve estar mapeada para a porta `1521` da sua máquina.
-
----
-
-## ⚙️ Configuração de Conexão
-
-A aplicação está configurada para se conectar usando os seguintes dados. Garanta que o seu banco de dados corresponde a eles:
-
--   **Usuário:** `SYSTEM`
--   **Senha:** `Trabalho204012`
--   **Service Name:** `FREEPDB1`
-
-O arquivo `conexion/passphrase/authentication.oracle` contém o usuário e a senha. O arquivo `conexion/oracle_queries.py` contém o Service Name e a lógica de conexão.
-
----
-
 ## 🚀 Como Executar
 
-O processo é feito com comandos diretos do `docker compose` no seu terminal.
+Com o Docker e Docker Compose instalados, o projeto inteiro (aplicação + banco de dados) é iniciado com um único comando. **Não é necessário ter um Oracle separado rodando.**
 
-**1. Garanta que seu contêiner Oracle (`oracle-23ai-free`) esteja rodando.**
-
-**2. Inicie a aplicação Python:**
-Na pasta do projeto (`~/projeto/trabalhoSQL`), execute o comando para construir a imagem e iniciar o contêiner em segundo plano:
+**1. Limpeza (Opcional, mas recomendado se houve erros):**
+Se você teve problemas com execuções anteriores, limpe o ambiente completamente. **Atenção: isso apagará o banco de dados antigo.**
 ```bash
-docker compose up --build -d
+docker-compose down --volumes
 ```
 
-**3. Crie as Tabelas (se for a primeira vez):**
-Com a aplicação rodando, execute o comando para criar a estrutura do banco:
+**2. Inicie o Ambiente Completo:**
+Na pasta do projeto, execute:
 ```bash
-docker compose exec app python -c "from db_setup.run_db_setup import run; run()"
+docker-compose up --build
+```
+-   O comando `--build` reconstrói a imagem da aplicação se houver mudanças no código.
+-   Na primeira vez, o Docker irá baixar a imagem do Oracle e criar o banco de dados, o que pode levar alguns minutos. Aguarde até ver a mensagem `DATABASE IS READY TO USE!` nos logs do serviço `database`.
+-   Após o banco de dados ficar pronto, a aplicação Python irá se conectar e exibir o menu principal no mesmo terminal.
+
+**3. Crie as Tabelas (em um novo terminal):**
+Com o ambiente rodando (após o passo 2), abra um **novo terminal** na mesma pasta e execute:
+```bash
+docker-compose exec app python -c "from db_setup.run_db_setup import run; run()"
+```
+Após executar, você pode voltar para o terminal do `docker-compose up` para usar o sistema.
+
+**4. Para Desligar Tudo:**
+No terminal onde o `docker-compose up` está rodando, pressione `Ctrl+C`. Para garantir que tudo seja removido (incluindo a rede e os contêineres), execute:
+```bash
+docker-compose down
 ```
 
-**4. Use o Sistema:**
-Para ver o menu e interagir com o programa, veja os logs do contêiner:
-```bash
-docker compose logs -f app
-```
+---
 
-**5. Para Desligar a Aplicação:**
-Quando terminar, para desligar o contêiner da aplicação, execute:
-```bash
-docker compose down
-```
-*(Isso não irá parar o seu contêiner do banco de dados `oracle-23ai-free`.)*
+## ⚙️ Detalhes da Configuração
+
+-   **Serviço da Aplicação (`app`):** Constrói a partir do `Dockerfile` local.
+-   **Serviço do Banco de Dados (`database`):**
+    -   **Imagem:** `container-registry.oracle.com/database/free:latest`
+    -   **Nome do Contêiner:** `trabalhosql-oracle-db`
+    -   **Credenciais:** A senha do usuário `SYSTEM` é `Trabalho204012`, definida no `docker-compose.yml`.
+    -   **Persistência:** Os dados do banco são salvos em um volume Docker chamado `oracle_data` para não serem perdidos.
+-   **Conexão:** A aplicação se conecta ao banco de dados usando o endereço `database`, que é o nome do serviço na rede interna do Docker.

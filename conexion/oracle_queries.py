@@ -15,7 +15,7 @@ class OracleQueries:
 
     def __init__(self, can_write:bool=False):
         self.can_write = can_write
-        self.host = "host.docker.internal"
+        self.host = "database"
         self.port = 1521
         self.service_name = 'FREEPBD1'
 
