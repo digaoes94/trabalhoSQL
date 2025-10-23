@@ -41,13 +41,13 @@ CREATE SEQUENCE item_venda_id_seq START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE item_compra_id_seq START WITH 1 INCREMENT BY 1;
 CREATE SEQUENCE enderecos_id_seq START WITH 1 INCREMENT BY 1;
 
--- Criação da tabela de Fornecedores
 CREATE TABLE fornecedores (
     id_fornecedor NUMBER(10) PRIMARY KEY,
-    nome VARCHAR2(100) NOT NULL,
     cnpj VARCHAR2(14) UNIQUE NOT NULL,
-    telefone VARCHAR2(20),
-    email VARCHAR2(100)
+    razaoSocial VARCHAR2(100) NOT NULL,    -- NOVA COLUNA (ou renomeada de 'nome')
+    nomeFantasia VARCHAR2(100),            -- NOVA COLUNA
+    email VARCHAR2(100),
+    telefone VARCHAR2(20)
 );
 
 -- Criação da tabela de Clientes
@@ -62,7 +62,7 @@ CREATE TABLE clientes (
 -- Criação da tabela de Endereços (associada a Clientes e Fornecedores)
 CREATE TABLE enderecos (
     id_endereco NUMBER(10) PRIMARY KEY,
-    cep VARCHAR2(8) NOT NULL,
+    cep VARCHAR2(9) NOT NULL,
     logradouro VARCHAR2(255) NOT NULL,
     numero NUMBER(5),
     complemento VARCHAR2(100),

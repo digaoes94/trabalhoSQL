@@ -1,11 +1,78 @@
 from model.Cliente import Cliente
 from model.Endereco import Endereco
 from conexion.oracle_queries import OracleQueries
+import pandas as pd
+import re
 
 class Cont_Cliente:
     def __init__(self):
         pass
-        
+
+    def _validar_e_formatar_cep(self, cep: str) -> str:
+        """
+        Valida e formata o CEP.
+        Aceita: "12345678" ou "12345-678"
+        Retorna: "12345-678" (formato padrão com hífen)
+        """
+        # Remove espaços em branco
+        cep = cep.strip()
+
+        # Remove hífen se existir
+        cep_sem_hifen = cep.replace('-', '')
+
+        # Verifica se tem 8 dígitos
+        if not cep_sem_hifen.isdigit() or len(cep_sem_hifen) != 8:
+            raise ValueError(f"CEP inválido: '{cep}'. Deve conter 8 dígitos (ex: 12345-678 ou 12345678)")
+
+        # Formata com hífen: XXXXX-XXX
+        cep_formatado = f"{cep_sem_hifen[:5]}-{cep_sem_hifen[5:]}"
+        return cep_formatado
+
+    def _validar_uf(self, estado: str) -> str:
+        """
+        Valida e formata o Estado (UF).
+        Aceita: "ES" ou "es" ou "Espírito Santo" ou "espirito santo"
+        Retorna: "ES" (código UF em maiúscula)
+        """
+        import unicodedata
+
+        # Dicionário de Estados Brasileiros
+        estados_map = {
+            'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas',
+            'BA': 'Bahia', 'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo',
+            'GO': 'Goiás', 'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul',
+            'MG': 'Minas Gerais', 'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná',
+            'PE': 'Pernambuco', 'PI': 'Piauí', 'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte',
+            'RS': 'Rio Grande do Sul', 'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina',
+            'SP': 'São Paulo', 'SE': 'Sergipe', 'TO': 'Tocantins'
+        }
+
+        estado = estado.strip().upper()
+
+        # Se for um código de 2 letras válido
+        if len(estado) == 2 and estado in estados_map:
+            return estado
+
+        # Função para remover acentos
+        def remove_acentos(text):
+            nfkd = unicodedata.normalize('NFKD', text)
+            return ''.join([c for c in nfkd if not unicodedata.combining(c)])
+
+        # Se for um nome de estado, encontrar o código
+        estado_sem_acentos = remove_acentos(estado)
+        for uf, nome in estados_map.items():
+            nome_sem_acentos = remove_acentos(nome.upper())
+            if estado_sem_acentos == nome_sem_acentos:
+                return uf
+
+        # Se nenhuma opção funcionar, listar as válidas
+        uf_validos = ", ".join(sorted(estados_map.keys()))
+        raise ValueError(
+            f"Estado inválido: '{estado}'\n"
+            f"Use o código UF com 2 letras (ex: ES, SP, RJ)\n"
+            f"UFs válidos: {uf_validos}"
+        )
+
     def _recupera_cliente(self, oracle: OracleQueries, cpf: str = None) -> Cliente:
         """ 
         Método interno para buscar os dados de Cliente e Endereco no BD e instanciar o objeto Cliente completo.
@@ -97,48 +164,56 @@ class Cont_Cliente:
         # verifica_existencia_cliente retorna True se o cliente *NÃO* existe
         if self.verifica_existencia_cliente(oracle, cpf):
             
-            # Coleta dados do Cliente
             print("--- Dados do Cliente ---")
             nome = input("Nome do Cliente: ")
             email = input("E-mail: ")
             telefone_str = input("Telefone: ")
             
-            # Coleta dados do Endereço
             print("--- Dados do Endereço ---")
-            cep = input("CEP: ")
+            while True:
+                try:
+                    cep_entrada = input("CEP (formato: 12345-678 ou 12345678): ")
+                    cep = self._validar_e_formatar_cep(cep_entrada)
+                    break
+                except ValueError as e:
+                    print(f"❌ {e}")
+                    continue
             logradouro = input("Logradouro: ")
             numero = input("Número: ")
             complemento = input("Complemento (opcional): ")
             bairro = input("Bairro: ")
             cidade = input("Cidade: ")
-            estado = input("Estado (UF): ")
+
+            # Validar Estado (UF)
+            while True:
+                try:
+                    estado_entrada = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ")
+                    estado = self._validar_uf(estado_entrada)
+                    break
+                except ValueError as e:
+                    print(f"❌ {e}")
+                    continue
             
-            # 2. Insere e persiste o novo Cliente (usando sequence manualmente)
             sql_cliente = f"""
                 INSERT INTO clientes (id_cliente, cpf, nome, email, telefone) 
                 VALUES (clientes_id_seq.NEXTVAL, '{cpf}', '{nome}', '{email}', '{telefone_str}')
             """
             oracle.write(sql_cliente)
 
-            # Recupera o ID do cliente recém-inserido
             query_id_cliente = "SELECT clientes_id_seq.CURRVAL AS id_cliente FROM DUAL"
             df_id_cliente = oracle.sqlToDataFrame(query_id_cliente)
             id_cliente_gerado = int(df_id_cliente.id_cliente.values[0])
 
-            # 1. Insere e persiste o novo Endereço (tabela dependente) - usando sequence
             sql_endereco = f"""
-                INSERT INTO enderecos (id_endereco, cep, logradouro, numero, complemento, bairro, cidade, estado, id_cliente) 
-                VALUES (enderecos_id_seq.NEXTVAL, '{cep}', '{logradouro}', {int(numero)}, '{complemento}', '{bairro}', '{cidade}', '{estado}', {id_cliente_gerado})
+                INSERT INTO enderecos (id_endereco, cep, logradouro, numero, complemento, bairro, cidade, estado, id_cliente)
+                VALUES (enderecos_id_seq.NEXTVAL, '{cep}', '{logradouro}', {int(numero) if numero else 'NULL'}, '{complemento}', '{bairro}', '{cidade}', '{estado}', {id_cliente_gerado})
             """
             oracle.write(sql_endereco)
 
-            # 3. Recupera o objeto Cliente completo para retorno
             novo_cliente = self._recupera_cliente(oracle, cpf)
-            
-            # Exibe os atributos do novo cliente
+
             print("\nCliente cadastrado com sucesso!")
             print(novo_cliente.to_string())
-            # Retorna o objeto novo_cliente para utilização posterior, caso necessário
             return novo_cliente
         else:
             print(f"O CPF {cpf} já está cadastrado.")
@@ -269,7 +344,7 @@ class Cont_Cliente:
 
             # Agrupa os itens pela venda (pedido)
             for id_venda, grupo in df_pedidos.groupby('id_venda'):
-                data = grupo['data'].iloc[0]
+                data = grupo['data_venda'].iloc[0]
                 data_str = data.strftime('%d/%m/%Y') if hasattr(data, 'strftime') else str(data)
                 
                 print(f"\n{data_str} – ID Venda: {id_venda} – Total da Venda: R$ {grupo['subtotal'].sum():.2f}")

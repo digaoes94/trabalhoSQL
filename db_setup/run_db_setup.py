@@ -1,3 +1,10 @@
+import sys
+import os
+
+# Adiciona o diretório pai ao path para permitir imports do projeto
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
 from conexion.oracle_queries import OracleQueries
 
 def create_tables(query: str):
@@ -135,8 +142,14 @@ END;
     oracle.close()
 
 def run():
-    with open("sql/create_tables.sql", "r") as f:
-        query_create = f.read()
+    try:
+        sql_path = os.path.join(project_root, "sql/create_tables.sql")
+        with open(sql_path, "r") as f:
+            query_create = f.read()
+    except FileNotFoundError as e:
+        print(f"❌ Erro: Arquivo SQL não encontrado em {sql_path}")
+        print(f"   {e}")
+        return
 
     print("🏗️ Creating tables and sequences...")
     create_tables(query=query_create)

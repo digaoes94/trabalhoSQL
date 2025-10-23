@@ -1,14 +1,3 @@
-###########################################################################
-# Author: Howard Roatti
-# Created: 02/09/2022
-# Last Update: 03/09/2022
-#
-# Essa classe auxilia na conexão com o Banco de Dados Oracle
-# Documentação base: 
-#                  (1) https://cx-oracle.readthedocs.io/en/latest/user_guide/sql_execution.html
-#                  (2) https://cx-oracle.readthedocs.io/en/latest/user_guide/plsql_execution.html
-#                  (3) https://cx-oracle.readthedocs.io/en/latest/index.html
-###########################################################################
 import json
 import cx_Oracle
 from pandas import DataFrame
@@ -41,13 +30,7 @@ class OracleQueries:
 
     def connectionString(self, in_container:bool=True):
         '''
-        Esse método cria uma string de conexão utilizando os parâmetros necessários
-        Parameters:
-        - host: endereço da localização do servidor
-        - port: porta a qual o Oracle está escutando
-        - service_name: nome do serviço criado para o banco de dados Oracle
-        - sid: id do serviço
-        return: string de conexão
+        Cria uma string de conexão utilizando os parâmetros necessários
         '''
         if not in_container:
             # Conexão via SID (comum em instalações locais antigas)
@@ -65,13 +48,7 @@ class OracleQueries:
 
     def connect(self):
         '''
-        Esse método realiza a conexão com o banco de dados Oracle
-        Parameters:
-        - user: nome do usuário criado para utilização do banco de dados
-        - password: senha do usuário criado para utilização do banco de dados
-        - dsn: string de conexão para acessar o banco de dados oracle
-        - enconding: codificação de caracteres para não haver erros com caracteres em português
-        return: um cursor que permite utilizar as funções da biblioteca cx_Oracle
+        Realiza a conexão com o banco de dados Oracle
         '''
 
         # Usa in_container=True por padrão, que usará o self.service_name ('XEPDB1')
@@ -82,58 +59,88 @@ class OracleQueries:
         self.cur = self.conn.cursor()
         return self.cur
 
-    def sqlToDataFrame(self, query:str) -> DataFrame:
+    def sqlToDataFrame(self, query:str, params:dict=None) -> DataFrame:
         '''
-        Esse método irá executar uma query
-        Parameters:
-        - query: consulta utilizada para recuperação dos dados
-        return: um DataFrame da biblioteca Pandas
+        Executa uma query e retorna os resultados como DataFrame
         '''
-        self.cur.execute(query)
-        rows = self.cur.fetchall()
-        return DataFrame(rows, columns=[col[0].lower() for col in self.cur.description])
+        try:
+            if params:
+                self.cur.execute(query, params)
+            else:
+                self.cur.execute(query)
+            rows = self.cur.fetchall()
+            if not self.cur.description:
+                return DataFrame()
+            return DataFrame(rows, columns=[col[0].lower() for col in self.cur.description])
+        except Exception as e:
+            print(f"❌ Erro ao executar query: {e}")
+            raise
 
-    def sqlToMatrix(self, query:str) -> tuple:
+    def sqlToMatrix(self, query:str, params:dict=None) -> tuple:
         '''
-        Esse método irá executar uma query
-        Parameters:
-        - query: consulta utilizada para recuperação dos dados
-        return: uma matriz (lista de listas), uma lista com os nomes das colunas(atributos) da(s) tabela(s)
+        Executa uma query e retorna matriz e nomes das colunas
         '''
-        self.cur.execute(query)
-        rows = self.cur.fetchall()
-        matrix = [list(row) for row in rows]
-        columns = [col[0].lower() for col in self.cur.description]
-        return matrix, columns
+        try:
+            if params:
+                self.cur.execute(query, params)
+            else:
+                self.cur.execute(query)
+            rows = self.cur.fetchall()
+            matrix = [list(row) for row in rows]
+            columns = [col[0].lower() for col in self.cur.description] if self.cur.description else []
+            return matrix, columns
+        except Exception as e:
+            print(f"❌ Erro ao executar query: {e}")
+            raise
 
-    def sqlToJson(self, query:str):
+    def sqlToJson(self, query:str, params:dict=None):
         '''
-        Esse método irá executar uma query
-        Parameters:
-        - query: consulta utilizada para recuperação dos dados
-        return: um objeto json
+        Executa uma query e retorna os resultados como JSON
         '''
-        self.cur.execute(query)
-        columns = [col[0].lower() for col in self.cur.description]
-        self.cur.rowfactory = lambda *args: dict(zip(columns, args))
-        rows = self.cur.fetchall()
-        return json.dumps(rows, default=str)
+        try:
+            if params:
+                self.cur.execute(query, params)
+            else:
+                self.cur.execute(query)
+            columns = [col[0].lower() for col in self.cur.description] if self.cur.description else []
+            self.cur.rowfactory = lambda *args: dict(zip(columns, args))
+            rows = self.cur.fetchall()
+            return json.dumps(rows, default=str)
+        except Exception as e:
+            print(f"❌ Erro ao executar query: {e}")
+            raise
 
-    def write(self, query:str):
+    def write(self, query:str, params:dict=None):
+        '''
+        Executa uma query de escrita (INSERT, UPDATE, DELETE)
+        '''
         if not self.can_write:
             raise Exception('Can\'t write using this connection')
 
-        self.cur.execute(query)
-        self.conn.commit()
+        try:
+            if params:
+                self.cur.execute(query, params)
+            else:
+                self.cur.execute(query)
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            print(f"❌ Erro ao executar write: {e}")
+            raise
 
     def close(self):
         if self.cur:
             self.cur.close()
 
-    def executeDDL(self, query:str):
+    def executeDDL(self, query:str, params:dict=None):
         '''
-        Esse método irá executar o comando DDL enviado no atributo query
-        Parameters:
-        - query: consulta utilizada para comandos DDL
+        Executa um comando DDL (CREATE, DROP, ALTER)
         '''
-        self.cur.execute(query)
+        try:
+            if params:
+                self.cur.execute(query, params)
+            else:
+                self.cur.execute(query)
+        except Exception as e:
+            print(f"❌ Erro ao executar DDL: {e}")
+            raise

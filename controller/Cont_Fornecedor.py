@@ -1,10 +1,56 @@
 from model.Fornecedor import Fornecedor
 from model.Endereco import Endereco
 from conexion.oracle_queries import OracleQueries
+import pandas as pd # Importação adicionada para garantir que o pd esteja disponível
 
 class Cont_Fornecedor:
     def __init__(self):
         pass
+
+    def _validar_uf(self, estado: str) -> str:
+        """
+        Valida e formata o Estado (UF).
+        Aceita: "ES" ou "es" ou "Espírito Santo" ou "espirito santo"
+        Retorna: "ES" (código UF em maiúscula)
+        """
+        import unicodedata
+
+        # Dicionário de Estados Brasileiros
+        estados_map = {
+            'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas',
+            'BA': 'Bahia', 'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo',
+            'GO': 'Goiás', 'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul',
+            'MG': 'Minas Gerais', 'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná',
+            'PE': 'Pernambuco', 'PI': 'Piauí', 'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte',
+            'RS': 'Rio Grande do Sul', 'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina',
+            'SP': 'São Paulo', 'SE': 'Sergipe', 'TO': 'Tocantins'
+        }
+
+        estado = estado.strip().upper()
+
+        # Se for um código de 2 letras válido
+        if len(estado) == 2 and estado in estados_map:
+            return estado
+
+        # Função para remover acentos
+        def remove_acentos(text):
+            nfkd = unicodedata.normalize('NFKD', text)
+            return ''.join([c for c in nfkd if not unicodedata.combining(c)])
+
+        # Se for um nome de estado, encontrar o código
+        estado_sem_acentos = remove_acentos(estado)
+        for uf, nome in estados_map.items():
+            nome_sem_acentos = remove_acentos(nome.upper())
+            if estado_sem_acentos == nome_sem_acentos:
+                return uf
+
+        # Se nenhuma opção funcionar, listar as válidas
+        uf_validos = ", ".join(sorted(estados_map.keys()))
+        raise ValueError(
+            f"Estado inválido: '{estado}'\n"
+            f"Use o código UF com 2 letras (ex: ES, SP, RJ)\n"
+            f"UFs válidos: {uf_validos}"
+        )
         
     def _recupera_fornecedor(self, oracle: OracleQueries, cnpj: str = None) -> Fornecedor:
         """ 
@@ -14,7 +60,9 @@ class Cont_Fornecedor:
         if cnpj is None:
             return None
             
-        # Assumindo que a tabela FORNECEDORES e ENDERECOS estão ligadas por uma chave (ex: cnpj_fornecedor = cnpj)
+        # Assumindo que a tabela FORNECEDORES e ENDERECOS estão ligadas por uma chave (ex: id_fornecedor)
+        # Atenção: Esta SELECT usa 'razaoSocial' e 'nomeFantasia' conforme o seu código Python.
+        # CERTIFIQUE-SE que seu create_tables.sql foi ajustado!
         query = f"""
             SELECT 
                 f.id_fornecedor, f.cnpj, f.razaoSocial, f.nomeFantasia, f.email, f.telefone, 
@@ -35,7 +83,7 @@ class Cont_Fornecedor:
             endereco = Endereco(
                 cep=fornecedor_data["cep"],
                 logradouro=fornecedor_data["logradouro"],
-                numero=int(fornecedor_data["numero"]) if pd.notna(fornecedor_data["numero"]) else None,
+                numero=int(fornecedor_data["numero"]) if pd.notna(fornecedor_data["numero"]) and str(fornecedor_data["numero"]).isdigit() else None,
                 complemento=fornecedor_data["complemento"],
                 bairro=fornecedor_data["bairro"],
                 cidade=fornecedor_data["cidade"],
@@ -112,13 +160,30 @@ class Cont_Fornecedor:
             complemento = input("Complemento (opcional): ")
             bairro = input("Bairro: ")
             cidade = input("Cidade: ")
-            estado = input("Estado (UF): ")
+
+            # Validar Estado (UF)
+            while True:
+                try:
+                    estado_entrada = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ")
+                    estado = self._validar_uf(estado_entrada)
+                    break
+                except ValueError as e:
+                    print(f"❌ {e}")
+                    continue
             
             # Cria objetos Modelo
-            endereco = Endereco(cep, logradouro, int(numero), complemento, bairro, cidade, estado)
-            novo_fornecedor = Fornecedor(cnpj, razao_social, nome_fantasia, endereco, email, [telefone_str])
+            try:
+                num_int = int(numero)
+            except ValueError:
+                num_int = None
+                print("Aviso: Número inválido. Definido como Nulo na inserção do Endereço.")
+                
+            endereco = Endereco(cep, logradouro, num_int, complemento, bairro, cidade, estado)
+            # O Fornecedor será instanciado sem o ID, que será gerado pelo BD
+            novo_fornecedor = Fornecedor(cnpj=cnpj, razaoSocial=razao_social, nomeFantasia=nome_fantasia, endereco=endereco, email=email, telefone=[telefone_str])
 
             # 2. Insere e persiste o novo Fornecedor (usando sequence)
+            # ESTE É O BLOCO CORRIGIDO. Presume-se que 'razaoSocial' e 'nomeFantasia' existem.
             sql_fornecedor = f"""
                 INSERT INTO fornecedores (id_fornecedor, cnpj, razaoSocial, nomeFantasia, email, telefone) 
                 VALUES (fornecedores_id_seq.NEXTVAL, '{cnpj}', '{razao_social}', '{nome_fantasia}', '{email}', '{telefone_str}')
@@ -132,11 +197,14 @@ class Cont_Fornecedor:
 
             # 1. Insere e persiste o novo Endereço (tabela dependente)
             sql_endereco = f"""
-                INSERT INTO enderecos (cep, logradouro, numero, complemento, bairro, cidade, estado, id_fornecedor) 
-                VALUES ('{cep}', '{logradouro}', {int(numero)}, '{complemento}', '{bairro}', '{cidade}', '{estado}', {id_fornecedor_gerado})
+                INSERT INTO enderecos (id_endereco, cep, logradouro, numero, complemento, bairro, cidade, estado, id_fornecedor)
+                VALUES (enderecos_id_seq.NEXTVAL, '{cep}', '{logradouro}', {num_int if num_int is not None else 'NULL'}, '{complemento}', '{bairro}', '{cidade}', '{estado}', {id_fornecedor_gerado})
             """
             oracle.write(sql_endereco)
             
+            # Atualiza o ID no objeto Python
+            novo_fornecedor.setIDFornecedor(id_fornecedor_gerado)
+
             print("\nFornecedor cadastrado com sucesso!")
             print(f"CNPJ: {novo_fornecedor.cnpj} | Nome Fantasia: {novo_fornecedor.nomeFantasia}")
             return novo_fornecedor
@@ -171,17 +239,24 @@ class Cont_Fornecedor:
             novo_numero = input(f"Novo Número (Atual: {endereco_atual.numero}): ") or str(endereco_atual.numero)
             
             # 1. Atualiza no BD (FORNECEDORES)
+            # CORREÇÃO: Colunas no UPDATE foram padronizadas para 'razaoSocial' e 'nomeFantasia' (sem underscore)
             sql_update_forn = f"""
                 UPDATE fornecedores 
-                SET razao_social = '{nova_razao}', nome_fantasia = '{novo_nome_fantasia}', email = '{novo_email}', telefone = '{novo_telefone}' 
+                SET razaoSocial = '{nova_razao}', nomeFantasia = '{novo_nome_fantasia}', email = '{novo_email}', telefone = '{novo_telefone}' 
                 WHERE cnpj = '{cnpj}'
             """
             oracle.write(sql_update_forn)
             
             # 2. Atualiza no BD (ENDERECOS)
+            # Tratamento para garantir que 'novo_numero' seja um inteiro ou 'NULL'
+            try:
+                num_int_update = int(novo_numero)
+            except ValueError:
+                num_int_update = 'NULL'
+            
             sql_update_endereco = f"""
                 UPDATE enderecos 
-                SET logradouro = '{novo_logradouro}', numero = {int(novo_numero)}
+                SET logradouro = '{novo_logradouro}', numero = {num_int_update}
                 WHERE id_fornecedor = {fornecedor_existente.id_fornecedor}
             """
             oracle.write(sql_update_endereco)
@@ -228,6 +303,11 @@ class Cont_Fornecedor:
             print(f"O CNPJ {cnpj} não existe.")
         else:
             fornecedor = self._recupera_fornecedor(oracle, cnpj) # Recupera o objeto fornecedor
+            
+            if fornecedor is None:
+                 print(f"Erro ao recuperar o fornecedor {cnpj}.")
+                 return None
+
             # Busca as compras (pedidos) do fornecedor com seus itens.
             query_pedidos = f"""
                 SELECT 
@@ -248,19 +328,14 @@ class Cont_Fornecedor:
             
             print(f"\n--- Compras (Pedidos) do Fornecedor (CNPJ: {cnpj}) ---")
             
-            try:
-                import pandas as pd
-                # Agrupa os itens pela compra (pedido)
-                for id_compra, grupo in df_pedidos.groupby('id_compra'):
-                    data = grupo['data'].iloc[0]
-                    data_str = data.strftime('%d/%m/%Y') if hasattr(data, 'strftime') else str(data)
-                    
-                    print(f"\n{data_str} – ID Compra: {id_compra} – Total da Compra: R$ {grupo['subtotal'].sum():.2f}")
-                    
-                    # Lista os itens da compra
-                    for index, row in grupo.iterrows():
-                        print(f"   - Produto: {row['nome_produto']} | Qtd: {row['quantidade']} | Preço Un.: R$ {row['preco_unitario_compra']:.2f} | Subtotal: R$ {row['subtotal']:.2f}")
-            except ImportError:
-                 # Tratamento de erro caso o pandas não esteja disponível
-                 print("Aviso: Falha ao formatar relatorio (Pandas não disponível). Exibindo resultados brutos:")
-                 print(df_pedidos.to_string())
+            # Agrupa os itens pela compra (pedido)
+            for id_compra, grupo in df_pedidos.groupby('id_compra'):
+                # Garante que a coluna 'data_compra' está sendo usada para a data
+                data = grupo['data_compra'].iloc[0] 
+                data_str = data.strftime('%d/%m/%Y') if hasattr(data, 'strftime') else str(data)
+                
+                print(f"\n{data_str} – ID Compra: {id_compra} – Total da Compra: R$ {grupo['subtotal'].sum():.2f}")
+                
+                # Lista os itens da compra
+                for _, row in grupo.iterrows():
+                    print(f"   - Produto: {row['nome_produto']} | Qtd: {row['quantidade']} | Preço Un.: R$ {row['preco_unitario_compra']:.2f} | Subtotal: R$ {row['subtotal']:.2f}")

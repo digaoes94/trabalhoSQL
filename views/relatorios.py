@@ -1,25 +1,33 @@
 from conexion.oracle_queries import OracleQueries
 import pandas as pd
+import os
 
 class Relatorio:
     def __init__(self):
-        with open("sql/relatorioClientes.sql") as f:
-            self.query_relatorioClientes = f.read()
+        # Usa __file__ para obter o caminho correto dos arquivos SQL
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-        with open("sql/relatorioCompras.sql") as f:
-            self.query_relatorioCompras = f.read()
+        try:
+            with open(os.path.join(base_path, "sql/relatorioClientes.sql")) as f:
+                self.query_relatorioClientes = f.read()
 
-        with open("sql/relatorioEstoque.sql") as f:
-            self.query_relatorioEstoque = f.read()
+            with open(os.path.join(base_path, "sql/relatorioCompras.sql")) as f:
+                self.query_relatorioCompras = f.read()
 
-        with open("sql/relatorioFornecedores.sql") as f:
-            self.query_relatorioFornecedores = f.read()
+            with open(os.path.join(base_path, "sql/relatorioEstoque.sql")) as f:
+                self.query_relatorioEstoque = f.read()
 
-        with open("sql/relatorioProdutos.sql") as f:
-            self.query_relatorioProdutos = f.read()
+            with open(os.path.join(base_path, "sql/relatorioFornecedores.sql")) as f:
+                self.query_relatorioFornecedores = f.read()
 
-        with open("sql/relatorioVendas.sql") as f:
-            self.query_relatorioVendas = f.read()
+            with open(os.path.join(base_path, "sql/relatorioProdutos.sql")) as f:
+                self.query_relatorioProdutos = f.read()
+
+            with open(os.path.join(base_path, "sql/relatorioVendas.sql")) as f:
+                self.query_relatorioVendas = f.read()
+        except FileNotFoundError as e:
+            print(f"❌ Erro: Arquivo SQL não encontrado: {e}")
+            raise
     
     def get_relatorioClientes(self):
         oracle = OracleQueries()
