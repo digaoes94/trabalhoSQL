@@ -12,6 +12,7 @@
 import json
 import cx_Oracle
 from pandas import DataFrame
+import os
 
 class OracleQueries:
 
@@ -19,14 +20,23 @@ class OracleQueries:
         self.can_write = can_write
         self.host = "localhost"
         self.port = 1521
-        self.service_name = 'XEPDB1'
-        self.sid = 'XE'
+        self.service_name = 'XEPDB1' # Service Name correto para Oracle 21c XE (gvenzl)
+        self.sid = 'XE'              # SID (provavelmente não será usado, mas mantido)
 
-        with open("conexion/passphrase/authentication.oracle", "r") as f:
+        # --- MODIFICAÇÃO ---
+        # Define o usuário e a senha diretamente para o container
+        #self.user = "SYSTEM"
+        #self.passwd = "oracle"
+        
+        # O código original que lia de um arquivo foi comentado/removido:
+        auth_path = os.path.join(os.path.dirname(__file__), "passphrase", "authentication.oracle")
+        with open(auth_path, "r") as f:
             self.user, self.passwd = f.read().split(',')            
+        # --- FIM DA MODIFICAÇÃO ---
 
     def __del__(self):
-        if self.cur:
+        # Adicionado verificação se 'self.cur' existe antes de fechar
+        if hasattr(self, 'cur') and self.cur:
             self.close()
 
     def connectionString(self, in_container:bool=True):
@@ -40,11 +50,13 @@ class OracleQueries:
         return: string de conexão
         '''
         if not in_container:
+            # Conexão via SID (comum em instalações locais antigas)
             string_connection = cx_Oracle.makedsn(host=self.host,
                                                 port=self.port,
                                                 sid=self.sid
                                                 )
         elif in_container:
+            # Conexão via Service Name (padrão para containers Docker/Oracle 21c)
             string_connection = cx_Oracle.makedsn(host=self.host,
                                                 port=self.port,
                                                 service_name=self.service_name
@@ -62,9 +74,10 @@ class OracleQueries:
         return: um cursor que permite utilizar as funções da biblioteca cx_Oracle
         '''
 
+        # Usa in_container=True por padrão, que usará o self.service_name ('XEPDB1')
         self.conn = cx_Oracle.connect(user=self.user,
                                       password=self.passwd,
-                                      dsn=self.connectionString()
+                                      dsn=self.connectionString() 
                                      )
         self.cur = self.conn.cursor()
         return self.cur
