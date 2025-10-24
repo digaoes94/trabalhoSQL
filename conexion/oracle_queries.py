@@ -24,9 +24,11 @@ class OracleQueries:
         # --- FIM DA MODIFICAÇÃO ---
 
     def __del__(self):
-        # Adicionado verificação se 'self.cur' existe antes de fechar
-        if hasattr(self, 'cur') and self.cur:
+        # Fecha a conexão com segurança ao destruir o objeto
+        try:
             self.close()
+        except Exception:
+            pass  # Ignora erros ao destruir o objeto
 
     def connectionString(self, in_container:bool=True):
         '''
@@ -129,8 +131,25 @@ class OracleQueries:
             raise
 
     def close(self):
-        if self.cur:
-            self.cur.close()
+        # Fecha cursor primeiro
+        try:
+            if hasattr(self, 'cur') and self.cur is not None:
+                self.cur.close()
+        except Exception:
+            pass  # Cursor já estava fechado ou não foi inicializado
+
+        # Depois fecha a conexão
+        try:
+            if hasattr(self, 'conn') and self.conn is not None:
+                self.conn.close()
+        except Exception:
+            pass  # Conexão já estava fechada ou não foi inicializada
+
+        # Limpa as referências para evitar problemas no destrutor
+        if hasattr(self, 'cur'):
+            self.cur = None
+        if hasattr(self, 'conn'):
+            self.conn = None
 
     def executeDDL(self, query:str, params:dict=None):
         '''

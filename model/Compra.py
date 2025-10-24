@@ -16,7 +16,7 @@ class Compra:
         self.total = total
 
     def to_string(self) -> str:
-        nome_fornecedor = self.fornecedor.nome_fantasia if self.fornecedor is not None else "N/A"
+        nome_fornecedor = self.fornecedor.nomeFantasia if self.fornecedor is not None else "N/A"
         valor_total_str = f"R$ {self.total:.2f}" if self.total is not None else "N/A"
         qtd_itens = len(self.itens) if self.itens is not None else 0
 

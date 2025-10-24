@@ -99,20 +99,22 @@ class Cont_Compra:
         cnpj_fornecedor = input("CNPJ do Fornecedor para a Compra: ")
         
         # Busca o id_fornecedor baseado no CNPJ
-        query_fornecedor = f"SELECT id_fornecedor, nome, cnpj FROM fornecedores WHERE cnpj = '{cnpj_fornecedor}'"
+        query_fornecedor = f"SELECT id_fornecedor, cnpj, razaoSocial, nomeFantasia, email, telefone FROM fornecedores WHERE cnpj = '{cnpj_fornecedor}'"
         df_fornecedor = oracle.sqlToDataFrame(query_fornecedor)
 
         if df_fornecedor.empty:
             print(f"Fornecedor de CNPJ {cnpj_fornecedor} não encontrado.")
             return None
-        
+
         fornecedor_data = df_fornecedor.iloc[0]
         fornecedor_obj = Fornecedor(
             id_fornecedor=int(fornecedor_data["id_fornecedor"]),
             cnpj=fornecedor_data["cnpj"],
-            razaoSocial=fornecedor_data["nome"], # Assumindo que 'nome' é a razão social
-            nomeFantasia=fornecedor_data["nome"], # Assumindo que 'nome' é o nome fantasia
-            endereco=None, email=None, telefone=None
+            razaoSocial=fornecedor_data["razaosocial"],
+            nomeFantasia=fornecedor_data["nomefantasia"],
+            email=fornecedor_data["email"],
+            telefone=fornecedor_data["telefone"],
+            endereco=None
         )
 
         # 2. Gera ID e Data
@@ -147,35 +149,50 @@ class Cont_Compra:
             id_produto = input("ID do Produto (0 para finalizar): ")
             if id_produto == '0':
                 break
-                
-            # Assume que você tem um Cont_Produto para buscar o objeto Produto
-            # Simulação de busca do Produto (você deve buscar no BD)
-            # Ex: produto = Cont_Produto().pesquisarProduto(id_produto)
-            produto_placeholder = Produto(id_produto=int(id_produto), nome=f"Produto {id_produto}", preco=10.0, descricao="")
-            
-            if produto_placeholder.id_produto != int(id_produto): # Simulação de falha
-                print("Produto não encontrado.")
+
+            # Valida se o ID é um número
+            try:
+                id_produto = int(id_produto)
+            except ValueError:
+                print("❌ ID do produto inválido. Digite um número.")
                 continue
 
-            try:
-                quantidade = int(input(f"Quantidade comprada de {produto_placeholder.nome}: "))
-                preco_unitario = float(input(f"Custo Unitário de {produto_placeholder.nome}: "))
-            except ValueError:
-                print("Entrada inválida. Tente novamente.")
+            # Busca o produto no banco de dados
+            query_produto = f"SELECT id_produto, nome, preco_unitario FROM produtos WHERE id_produto = {id_produto}"
+            df_produto = oracle.sqlToDataFrame(query_produto)
+
+            if df_produto.empty:
+                print(f"❌ Produto de ID {id_produto} não encontrado no banco de dados.")
                 continue
-                
+
+            # Reconstrói o objeto Produto com dados reais do banco
+            produto_data = df_produto.iloc[0]
+            produto = Produto(
+                id_produto=int(produto_data["id_produto"]),
+                nome=produto_data["nome"],
+                preco=float(produto_data["preco_unitario"]),
+                descricao=""
+            )
+
+            try:
+                quantidade = int(input(f"Quantidade comprada de {produto.nome}: "))
+                preco_unitario = float(input(f"Custo Unitário de {produto.nome}: "))
+            except ValueError:
+                print("❌ Entrada inválida. Tente novamente.")
+                continue
+
             subtotal = quantidade * preco_unitario
-            
+
             item = ItemCompra(
-                produto=produto_placeholder, 
-                quantidade=quantidade, 
-                preco_unitario=preco_unitario, 
-                subtotal=subtotal, 
+                produto=produto,
+                quantidade=quantidade,
+                preco_unitario=preco_unitario,
+                subtotal=subtotal,
                 compra=compra
             )
             itens.append(item)
-            print(f"Item adicionado. Subtotal: R$ {subtotal:.2f}")
-            
+            print(f"✅ Item adicionado. Subtotal: R$ {subtotal:.2f}")
+
         return itens
 
     def finalizarCompra(self, oracle: OracleQueries, compra: Compra):
@@ -192,8 +209,8 @@ class Cont_Compra:
         # 2. Persiste os Itens da Compra e Atualiza o Estoque (CMP)
         for item in compra.itens:
             sql_item = f"""
-                INSERT INTO itemcompras (id_compra, id_produto, quantidade, preco_unitario, subtotal)
-                VALUES ({compra.id_compra}, {item.produto.id_produto}, {item.quantidade}, {item.preco_unitario}, {item.subtotal})
+                INSERT INTO item_compra (id_item_compra, id_compra, id_produto, quantidade, preco_unitario_compra, subtotal)
+                VALUES (item_compra_id_seq.NEXTVAL, {compra.id_compra}, {item.produto.id_produto}, {item.quantidade}, {item.preco_unitario}, {item.subtotal})
             """
             oracle.write(sql_item)
             
@@ -236,15 +253,17 @@ class Cont_Compra:
         compra_data = df_compra.iloc[0]
         
         # Busca o Fornecedor completo para a Compra
-        query_fornecedor = f"SELECT id_fornecedor, cnpj, nome FROM fornecedores WHERE id_fornecedor = {compra_data["id_fornecedor"]}"
+        query_fornecedor = f"SELECT id_fornecedor, cnpj, razaoSocial, nomeFantasia, email, telefone FROM fornecedores WHERE id_fornecedor = {compra_data['id_fornecedor']}"
         df_fornecedor = oracle.sqlToDataFrame(query_fornecedor)
         fornecedor_data = df_fornecedor.iloc[0]
         fornecedor_obj = Fornecedor(
             id_fornecedor=int(fornecedor_data["id_fornecedor"]),
             cnpj=fornecedor_data["cnpj"],
-            razaoSocial=fornecedor_data["nome"],
-            nomeFantasia=fornecedor_data["nome"],
-            endereco=None, email=None, telefone=None
+            razaoSocial=fornecedor_data["razaosocial"],
+            nomeFantasia=fornecedor_data["nomefantasia"],
+            email=fornecedor_data["email"],
+            telefone=fornecedor_data["telefone"],
+            endereco=None
         )
         
         compra_recuperada = Compra(
@@ -256,11 +275,11 @@ class Cont_Compra:
         
         itens = []
         for index, row in df_compra.iterrows():
-            produto = Produto(id_produto=int(row["id_produto"]), nome=row["nome_produto"], preco=row["preco_unitario"], descricao="N/A")
+            produto = Produto(id_produto=int(row["id_produto"]), nome=row["nome_produto"], preco=row["preco_unitario_compra"], descricao="N/A")
             item = ItemCompra(
-                produto=produto, 
-                quantidade=int(row["quantidade"]), 
-                preco_unitario=float(row["preco_unitario"]), 
+                produto=produto,
+                quantidade=int(row["quantidade"]),
+                preco_unitario=float(row["preco_unitario_compra"]), 
                 subtotal=float(row["subtotal"]), 
                 compra=compra_recuperada
             )

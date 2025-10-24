@@ -1,10 +1,12 @@
-select p.id_produto
+SELECT p.id_produto as id_produto
      , p.nome as nome_produto
-     , p.qtde_estoque
-     , case 
-          when p.qtde_estoque = 0 then 'Sem Estoque'
-          when p.qtde_estoque < 10 then 'Estoque Baixo'
-          else 'OK'
-       end as status_estoque
-  from produtos p
- order by p.qtde_estoque asc, p.nome asc
+     , p.descricao as descricao
+     , p.preco_unitario as preco_unitario
+     , p.qtde_estoque as qtde_estoque
+     , CASE
+          WHEN p.qtde_estoque = 0 THEN 'Sem Estoque'
+          WHEN p.qtde_estoque < 10 THEN 'Estoque Baixo'
+          ELSE 'OK'
+       END as status_estoque
+  FROM produtos p
+ ORDER BY p.qtde_estoque asc, p.nome asc

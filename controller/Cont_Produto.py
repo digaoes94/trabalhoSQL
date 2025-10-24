@@ -75,50 +75,78 @@ class Cont_Produto:
         oracle = OracleQueries(can_write=True)
         oracle.connect()
 
-        # Solicita o ID (Assumindo que o usuário insere, ou o DB gera)
-        id_produto = input("ID do Produto (Novo): ")
+        # Pergunta se quer gerar ID automaticamente ou inserir manualmente
+        print("\n--- ID do Produto ---")
+        print("1 - Gerar ID automaticamente")
+        print("2 - Inserir ID manualmente")
+        opcao_id = input("Escolha (1 ou 2): ")
 
-        # Tenta converter para int
-        try:
-            id_produto = int(id_produto)
-        except ValueError:
-            print("ID do produto inválido.")
+        id_produto = None
+        usar_sequence = False
+
+        if opcao_id == '1':
+            # Usar sequence automática
+            usar_sequence = True
+        elif opcao_id == '2':
+            # Inserir ID manualmente
+            id_entrada = input("ID do Produto: ")
+            try:
+                id_produto = int(id_entrada)
+            except ValueError:
+                print("❌ ID do produto inválido.")
+                return None
+
+            # Verifica se o ID já existe
+            if not self.verifica_existencia_produto(oracle, id_produto):
+                print(f"❌ O Produto de ID {id_produto} já está cadastrado.")
+                return None
+        else:
+            print("❌ Opção inválida.")
             return None
 
-        # verifica_existencia_produto retorna True se o produto *NÃO* existe
-        if self.verifica_existencia_produto(oracle, id_produto):
-            
-            # Coleta dados do Produto
-            print("--- Dados do Produto ---")
-            nome = input("Nome do Produto: ")
-            
-            # Tratamento para preço (Double/Float)
-            preco = input("Preço Unitário: ")
-            try:
-                preco_float = float(preco)
-            except ValueError:
-                print("Preço inválido. Cancelando operação.")
-                return None
-                
-            descricao = input("Descrição: ")
-            
-            # Insere e persiste o novo Produto (usando sequence)
+        # Coleta dados do Produto
+        print("--- Dados do Produto ---")
+        nome = input("Nome do Produto: ")
+
+        # Tratamento para preço (Double/Float)
+        preco = input("Preço Unitário: ")
+        try:
+            preco_float = float(preco)
+        except ValueError:
+            print("❌ Preço inválido. Cancelando operação.")
+            return None
+
+        descricao = input("Descrição: ")
+
+        # Insere o novo Produto
+        if usar_sequence:
+            # Gera ID automaticamente
             sql_produto = f"""
-                INSERT INTO produtos (id_produto, nome, preco_unitario, descricao) 
+                INSERT INTO produtos (id_produto, nome, preco_unitario, descricao)
                 VALUES (produtos_id_seq.NEXTVAL, '{nome}', {preco_float}, '{descricao}')
             """
             oracle.write(sql_produto)
 
-            # Recupera o objeto Produto completo para retorno
-            novo_produto = self._recupera_produto(oracle, id_produto)
-            
-            # Exibe os atributos do novo produto
-            print("\nProduto cadastrado com sucesso!")
-            print(novo_produto.to_string())
-            return novo_produto
+            # Recupera o ID gerado automaticamente
+            query_id_produto = "SELECT produtos_id_seq.CURRVAL AS id_produto FROM DUAL"
+            df_id_produto = oracle.sqlToDataFrame(query_id_produto)
+            id_produto_gerado = int(df_id_produto.id_produto.values[0])
         else:
-            print(f"O Produto de ID {id_produto} já está cadastrado.")
-            return None
+            # Usa o ID informado manualmente
+            sql_produto = f"""
+                INSERT INTO produtos (id_produto, nome, preco_unitario, descricao)
+                VALUES ({id_produto}, '{nome}', {preco_float}, '{descricao}')
+            """
+            oracle.write(sql_produto)
+            id_produto_gerado = id_produto
+
+        # Recupera o objeto Produto completo para retorno
+        novo_produto = self._recupera_produto(oracle, id_produto_gerado)
+
+        # Exibe os atributos do novo produto
+        print("\n✅ Produto cadastrado com sucesso!")
+        print(novo_produto.to_string())
+        return novo_produto
 
     def atualizarProduto(self) -> Produto:
         # Cria uma nova conexão com o banco que permite alteração

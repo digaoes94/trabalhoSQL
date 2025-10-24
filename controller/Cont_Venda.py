@@ -139,51 +139,68 @@ class Cont_Venda:
             id_produto = input("ID do Produto (0 para finalizar): ")
             if id_produto == '0':
                 break
-                
+
             try:
                 id_produto = int(id_produto)
             except ValueError:
-                print("ID do Produto inválido.")
+                print("❌ ID do Produto inválido.")
                 continue
+
+            # Busca o produto no banco de dados
+            query_produto = f"SELECT id_produto, nome, preco_unitario FROM produtos WHERE id_produto = {id_produto}"
+            df_produto = oracle.sqlToDataFrame(query_produto)
+
+            if df_produto.empty:
+                print(f"❌ Produto de ID {id_produto} não encontrado no banco de dados.")
+                continue
+
+            # Reconstrói o objeto Produto com dados reais do banco
+            produto_data = df_produto.iloc[0]
+            produto = Produto(
+                id_produto=int(produto_data["id_produto"]),
+                nome=produto_data["nome"],
+                preco=float(produto_data["preco_unitario"]),
+                descricao=""
+            )
 
             # 1. Verifica Estoque e Custo CMP
             estoque_atual = self._recupera_estoque(oracle, id_produto)
             qtd_estoque = estoque_atual["quantidade"]
             custo_unitario_cmp = estoque_atual["custo_unitario"]
-            
+
             if qtd_estoque <= 0:
-                print(f"Produto {id_produto} sem estoque.")
+                print(f"❌ Produto '{produto.nome}' (ID: {id_produto}) sem estoque.")
                 continue
 
-            # Simulação de busca do Produto
-            produto_placeholder = Produto(id_produto=id_produto, nome=f"Produto {id_produto}", preco=10.0, descricao="")
-            
             try:
-                quantidade = int(input(f"Quantidade vendida de {produto_placeholder.nome} (Max: {qtd_estoque}): "))
-                
+                quantidade = int(input(f"Quantidade vendida de {produto.nome} (Max: {qtd_estoque}): "))
+
                 if quantidade > qtd_estoque:
-                    print(f"Quantidade indisponível. Máximo: {qtd_estoque}.")
+                    print(f"❌ Quantidade indisponível. Máximo: {qtd_estoque}.")
                     continue
-                    
-                preco_unitario_venda = float(input(f"Preço Unitário de Venda de {produto_placeholder.nome}: "))
+
+                # Usa o preço cadastrado no banco, sem pedir novamente
+                preco_unitario_venda = float(produto.preco)
+                print(f"   Preço unitário: R$ {preco_unitario_venda:.2f} (do banco de dados)")
+
             except ValueError:
-                print("Entrada inválida. Tente novamente.")
+                print("❌ Entrada inválida. Tente novamente.")
                 continue
-                
+
             subtotal = quantidade * preco_unitario_venda
-            
+
             item = ItemVenda(
-                produto=produto_placeholder, 
-                quantidade=quantidade, 
-                preco_unitario=preco_unitario_venda, # Este é o preço de VENDA, não o CUSTO!
-                subtotal=subtotal, 
+                produto=produto,
+                quantidade=quantidade,
+                preco_unitario=preco_unitario_venda,  # Este é o preço de VENDA do banco
+                subtotal=subtotal,
                 venda=venda
             )
             # Adiciona o custo CMP do momento ao objeto para uso posterior no método finalizarVenda
-            item.custo_unitario_cmp = custo_unitario_cmp 
+            item.custo_unitario_cmp = custo_unitario_cmp
             itens.append(item)
-            print(f"Item adicionado. Subtotal: R$ {subtotal:.2f}")
-            
+            print(f"✅ Item adicionado. Subtotal: R$ {subtotal:.2f}")
+
         return itens
 
     def finalizarVenda(self, oracle: OracleQueries, venda: Venda):
@@ -199,13 +216,10 @@ class Cont_Venda:
 
         # 2. Persiste os Itens da Venda e Atualiza o Estoque (CMV)
         for item in venda.itens:
-            # Presume-se que ItemVenda tem um campo 'preco_custo' ou 'custo_cmv' para registrar o CMV
-            # Se a tabela ItemVendas só tem o preço de venda, vamos registrar o CMV do momento separadamente 
-            # na tabela de Estoque/Relatório
-            
+            # Insere o item de venda na tabela item_venda
             sql_item = f"""
-                INSERT INTO itemvendas (id_venda, id_produto, quantidade, preco_unitario, subtotal)
-                VALUES ({venda.id_venda}, {item.produto.id_produto}, {item.quantidade}, {item.preco_unitario}, {item.subtotal})
+                INSERT INTO item_venda (id_item_venda, id_venda, id_produto, quantidade, preco_unitario_venda, subtotal)
+                VALUES (item_venda_id_seq.NEXTVAL, {venda.id_venda}, {item.produto.id_produto}, {item.quantidade}, {item.preco_unitario}, {item.subtotal})
             """
             oracle.write(sql_item)
             
@@ -213,7 +227,7 @@ class Cont_Venda:
             # Usa o custo CMP que foi anexado temporariamente ao objeto ItemVenda
             self._atualizar_estoque_venda(oracle, item, item.custo_unitario_cmp)
             
-        print("-> Itens de Venda persistidos na tabela ITEMVENDAS.")
+        print("-> Itens de Venda persistidos na tabela ITEM_VENDA.")
 
     def pesquisarVenda(self) -> Venda:
         oracle = OracleQueries(can_write=False)
@@ -268,12 +282,12 @@ class Cont_Venda:
         
         itens = []
         for index, row in df_venda.iterrows():
-            produto = Produto(id_produto=int(row["id_produto"]), nome=row["nome_produto"], preco=row["preco_unitario"], descricao="N/A")
+            produto = Produto(id_produto=int(row["id_produto"]), nome=row["nome_produto"], preco=row["preco_unitario_venda"], descricao="N/A")
             item = ItemVenda(
-                produto=produto, 
-                quantidade=int(row["quantidade"]), 
-                preco_unitario=float(row["preco_unitario"]), # Preço de Venda
-                subtotal=float(row["subtotal"]), 
+                produto=produto,
+                quantidade=int(row["quantidade"]),
+                preco_unitario=float(row["preco_unitario_venda"]),  # Preço de Venda
+                subtotal=float(row["subtotal"]),
                 venda=venda_recuperada
             )
             itens.append(item)

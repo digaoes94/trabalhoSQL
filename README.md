@@ -57,7 +57,12 @@ trabalhoSQL/
 │
 ├── 🗄️ sql/                     # Scripts SQL
 │   ├── create_tables.sql       # Criação de tabelas e sequences
-│   └── relatorio*.sql          # Queries de relatórios
+│   └── relatorioClientes.sql   # Queries de relatórios
+│   └── relatorioCompras.sql
+│   └── relatorioEstoque.sql 
+│   └── relatorioFornecedores.sql 
+│   └── relatorioProdutos.sql
+│   └── relatorioVendas.sql  
 │
 ├── ⚙️ db_setup/                # Setup do banco de dados
 │   ├── run_db_setup.py         # Cria tabelas e triggers
