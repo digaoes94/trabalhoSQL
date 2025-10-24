@@ -293,25 +293,93 @@ class Cont_Cliente:
             endereco_para_atualizar = False
             novo_logradouro = None
             novo_numero = None
+            novo_cep = None
+            novo_complemento = None
+            novo_bairro = None
+            novo_cidade = None
+            novo_estado = None
 
             # Verifica se existe endereço cadastrado
-            query_endereco = f"SELECT logradouro, numero FROM enderecos WHERE id_cliente = {id_cliente}"
+            query_endereco = f"SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM enderecos WHERE id_cliente = {id_cliente}"
             df_endereco = oracle.sqlToDataFrame(query_endereco)
 
             if not df_endereco.empty:
                 endereco_para_atualizar = True
                 endereco_data = df_endereco.iloc[0]
+                cep_atual = endereco_data["cep"]
                 logradouro_atual = endereco_data["logradouro"]
                 numero_atual = endereco_data["numero"]
+                complemento_atual = endereco_data["complemento"]
+                bairro_atual = endereco_data["bairro"]
+                cidade_atual = endereco_data["cidade"]
+                estado_atual = endereco_data["estado"]
+
+                novo_cep = input(f"Novo CEP (Atual: {cep_atual}): ") or cep_atual
+                # Validar CEP se foi digitado novo
+                if novo_cep != cep_atual:
+                    while True:
+                        try:
+                            novo_cep = self._validar_e_formatar_cep(novo_cep)
+                            break
+                        except ValueError as e:
+                            print(f"❌ {e}")
+                            novo_cep = input("CEP (formato: 12345-678 ou 12345678): ") or cep_atual
 
                 novo_logradouro = input(f"Novo Logradouro (Atual: {logradouro_atual}): ") or logradouro_atual
                 novo_numero = input(f"Novo Número (Atual: {numero_atual}): ") or str(numero_atual)
+                novo_complemento = input(f"Novo Complemento (Atual: {complemento_atual}): ") or complemento_atual
+                novo_bairro = input(f"Novo Bairro (Atual: {bairro_atual}): ") or bairro_atual
+                novo_cidade = input(f"Novo Cidade (Atual: {cidade_atual}): ") or cidade_atual
+                novo_estado = input(f"Novo Estado (Atual: {estado_atual}): ") or estado_atual
+
+                # Validar Estado se foi digitado novo
+                if novo_estado != estado_atual:
+                    while True:
+                        try:
+                            novo_estado = self._validar_uf(novo_estado)
+                            break
+                        except ValueError as e:
+                            print(f"❌ {e}")
+                            novo_estado = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ") or estado_atual
             else:
                 print("  ⚠️  Este cliente não possui endereço cadastrado")
                 deseja_cadastrar = input("  Deseja cadastrar um endereço agora? (s/n): ").lower()
                 if deseja_cadastrar == 's':
-                    # Aqui você poderia implementar lógica para adicionar endereço
-                    print("  Funcionalidade de adicionar endereço ainda não implementada")
+                    # Implementação para adicionar endereço
+                    endereco_para_atualizar = True
+
+                    print("\n--- Cadastrar Endereço ---")
+                    while True:
+                        try:
+                            cep_entrada = input("CEP (formato: 12345-678 ou 12345678): ")
+                            novo_cep = self._validar_e_formatar_cep(cep_entrada)
+                            break
+                        except ValueError as e:
+                            print(f"❌ {e}")
+                            continue
+
+                    novo_logradouro = input("Logradouro: ")
+                    novo_numero = input("Número: ")
+                    novo_complemento = input("Complemento (opcional): ")
+                    novo_bairro = input("Bairro: ")
+                    novo_cidade = input("Cidade: ")
+
+                    # Validar Estado (UF)
+                    while True:
+                        try:
+                            estado_entrada = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ")
+                            novo_estado = self._validar_uf(estado_entrada)
+                            break
+                        except ValueError as e:
+                            print(f"❌ {e}")
+                            continue
+
+                    # Inserir novo endereço no banco
+                    sql_novo_endereco = f"""
+                        INSERT INTO enderecos (id_endereco, cep, logradouro, numero, complemento, bairro, cidade, estado, id_cliente)
+                        VALUES (enderecos_id_seq.NEXTVAL, '{novo_cep}', '{novo_logradouro}', {int(novo_numero) if novo_numero else 'NULL'}, '{novo_complemento}', '{novo_bairro}', '{novo_cidade}', '{novo_estado}', {id_cliente})
+                    """
+                    oracle.write(sql_novo_endereco)
 
             # 1. Atualiza no BD (CLIENTES)
             sql_update_cliente = f"""
@@ -322,10 +390,11 @@ class Cont_Cliente:
             oracle.write(sql_update_cliente)
 
             # 2. Atualiza no BD (ENDERECOS) se existir
-            if endereco_para_atualizar:
+            if endereco_para_atualizar and df_endereco.empty == False:
                 sql_update_endereco = f"""
                     UPDATE enderecos
-                    SET logradouro = '{novo_logradouro}', numero = {int(novo_numero)}
+                    SET cep = '{novo_cep}', logradouro = '{novo_logradouro}', numero = {int(novo_numero) if novo_numero else 'NULL'},
+                        complemento = '{novo_complemento}', bairro = '{novo_bairro}', cidade = '{novo_cidade}', estado = '{novo_estado}'
                     WHERE id_cliente = {id_cliente}
                 """
                 oracle.write(sql_update_endereco)
