@@ -53,32 +53,30 @@ class Cont_Fornecedor:
         )
         
     def _recupera_fornecedor(self, oracle: OracleQueries, cnpj: str = None) -> Fornecedor:
-        """ 
+        """
         Método interno para buscar os dados de Fornecedor e Endereco no BD e instanciar o objeto Fornecedor completo.
         Retorna o objeto Fornecedor ou None se não encontrado.
         """
         if cnpj is None:
             return None
-            
+
         # Assumindo que a tabela FORNECEDORES e ENDERECOS estão ligadas por uma chave (ex: id_fornecedor)
-        # Atenção: Esta SELECT usa 'razaoSocial' e 'nomeFantasia' conforme o seu código Python.
-        # CERTIFIQUE-SE que seu create_tables.sql foi ajustado!
         query = f"""
-            SELECT 
-                f.id_fornecedor, f.cnpj, f.razaoSocial, f.nomeFantasia, f.email, f.telefone, 
-                e.cep, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.estado 
-            FROM fornecedores f 
-            INNER JOIN enderecos e ON f.id_fornecedor = e.id_fornecedor 
+            SELECT
+                f.id_fornecedor, f.cnpj, f.razaoSocial, f.nomeFantasia, f.email, f.telefone,
+                e.cep, e.logradouro, e.numero, e.complemento, e.bairro, e.cidade, e.estado
+            FROM fornecedores f
+            INNER JOIN enderecos e ON f.id_fornecedor = e.id_fornecedor
             WHERE f.cnpj = '{cnpj}'
         """
-        
+
         df_fornecedor = oracle.sqlToDataFrame(query)
 
         if df_fornecedor.empty:
             return None
         else:
             fornecedor_data = df_fornecedor.iloc[0]
-            
+
             # 1. Cria o objeto Endereco
             endereco = Endereco(
                 cep=fornecedor_data["cep"],
@@ -89,16 +87,16 @@ class Cont_Fornecedor:
                 cidade=fornecedor_data["cidade"],
                 estado=fornecedor_data["estado"]
             )
-            
+
             # 2. Cria o objeto Fornecedor
             # O campo 'telefone' é uma lista no model, mas vem como string do BD.
             telefone_lista = [fornecedor_data["telefone"]] if pd.notna(fornecedor_data["telefone"]) else []
-            
+
             fornecedor = Fornecedor(
                 id_fornecedor=int(fornecedor_data["id_fornecedor"]),
                 cnpj=fornecedor_data["cnpj"],
-                razaoSocial=fornecedor_data["razaoSocial"],
-                nomeFantasia=fornecedor_data["nomeFantasia"],
+                razaoSocial=fornecedor_data["razaosocial"],
+                nomeFantasia=fornecedor_data["nomefantasia"],
                 endereco=endereco,
                 email=fornecedor_data["email"],
                 telefone=telefone_lista
@@ -245,7 +243,7 @@ class Cont_Fornecedor:
 
             print("\n--- Fornecedores Cadastrados ---")
             for idx, row in df_fornecedores.iterrows():
-                print(f"{idx + 1}. CNPJ: {row['cnpj']} | Nome: {row['nomeFantasia']}")
+                print(f"{idx + 1}. CNPJ: {row['cnpj']} | Nome: {row['nomefantasia']}")
 
             # Solicita ao usuário qual fornecedor deseja alterar
             selecao = input("\nDigite o número do fornecedor para atualizar (ou 0 para voltar): ")
@@ -265,118 +263,128 @@ class Cont_Fornecedor:
             fornecedor_selecionado = df_fornecedores.iloc[idx_selecionado]
             cnpj = fornecedor_selecionado['cnpj']
 
-        # Verifica se o fornecedor existe na base de dados (se retorna True, NÃO existe)
-        if self.verifica_existencia_fornecedor(oracle, cnpj):
-            print(f"O CNPJ {cnpj} não existe.")
+            # Verifica se o fornecedor existe na base de dados (se retorna True, NÃO existe)
+            if self.verifica_existencia_fornecedor(oracle, cnpj):
+                print(f"O CNPJ {cnpj} não existe.")
+                continue
+
+            # Fornecedor existe, proceder com a atualização
+            break
+
+        # Se saiu do loop com selecao == '0', retorna
+        if selecao == '0':
             return None
+
+        # Se chegou aqui, fornecedor_selecionado foi selecionado com sucesso
+        # Recupera o ID do fornecedor de forma segura
+        id_fornecedor = self._recupera_id_fornecedor(oracle, cnpj)
+
+        if id_fornecedor is None:
+            print(f"Erro ao recuperar dados do fornecedor com CNPJ {cnpj}.")
+            return None
+
+        # Tenta recuperar o fornecedor completo (com endereço)
+        fornecedor_existente = self._recupera_fornecedor(oracle, cnpj)
+
+        # Exibe dados atuais (com tratamento para quando não tem endereço)
+        if fornecedor_existente:
+            print(f"\nDados atuais do Fornecedor: CNPJ: {fornecedor_existente.cnpj} | Nome Fantasia: {fornecedor_existente.nomeFantasia}")
         else:
-            # Recupera o ID do fornecedor de forma segura
-            id_fornecedor = self._recupera_id_fornecedor(oracle, cnpj)
+            # Se não tem endereço, busca informações básicas
+            query_info = f"SELECT cnpj, razaoSocial, nomeFantasia, email, telefone FROM fornecedores WHERE cnpj = '{cnpj}'"
+            df_info = oracle.sqlToDataFrame(query_info)
+            if not df_info.empty:
+                info = df_info.iloc[0]
+                print(f"\nDados atuais do Fornecedor:")
+                print(f"  CNPJ: {info['cnpj']} | Razão Social: {info['razaosocial']} | Nome Fantasia: {info['nomefantasia']}")
+                print(f"  Email: {info['email']} | Telefone: {info['telefone']}")
+                print("  Obs: Endereço não cadastrado para este fornecedor")
 
-            if id_fornecedor is None:
-                print(f"Erro ao recuperar dados do fornecedor com CNPJ {cnpj}.")
-                return None
+        # Coleta dados atuais para usar como padrão
+        query_fornecedor_data = f"SELECT razaoSocial, nomeFantasia, email, telefone FROM fornecedores WHERE cnpj = '{cnpj}'"
+        df_fornecedor_data = oracle.sqlToDataFrame(query_fornecedor_data)
+        if df_fornecedor_data.empty:
+            print("Erro ao recuperar dados do fornecedor.")
+            return None
 
-            # Tenta recuperar o fornecedor completo (com endereço)
-            fornecedor_existente = self._recupera_fornecedor(oracle, cnpj)
+        fornecedor_data = df_fornecedor_data.iloc[0]
+        razao_atual = fornecedor_data["razaosocial"]
+        fantasia_atual = fornecedor_data["nomefantasia"]
+        email_atual = fornecedor_data["email"]
+        telefone_atual = fornecedor_data["telefone"]
 
-            # Exibe dados atuais (com tratamento para quando não tem endereço)
-            if fornecedor_existente:
-                print(f"\nDados atuais do Fornecedor: CNPJ: {fornecedor_existente.cnpj} | Nome Fantasia: {fornecedor_existente.nomeFantasia}")
-            else:
-                # Se não tem endereço, busca informações básicas
-                query_info = f"SELECT cnpj, razaoSocial, nomeFantasia, email, telefone FROM fornecedores WHERE cnpj = '{cnpj}'"
-                df_info = oracle.sqlToDataFrame(query_info)
-                if not df_info.empty:
-                    info = df_info.iloc[0]
-                    print(f"\nDados atuais do Fornecedor:")
-                    print(f"  CNPJ: {info['cnpj']} | Razão Social: {info['razaoSocial']} | Nome Fantasia: {info['nomeFantasia']}")
-                    print(f"  Email: {info['email']} | Telefone: {info['telefone']}")
-                    print("  Obs: Endereço não cadastrado para este fornecedor")
+        # Coleta novos dados do Fornecedor
+        nova_razao = input(f"Nova Razão Social (Atual: {razao_atual}): ") or razao_atual
+        novo_nome_fantasia = input(f"Novo Nome Fantasia (Atual: {fantasia_atual}): ") or fantasia_atual
+        novo_email = input(f"Novo E-mail (Atual: {email_atual}): ") or email_atual
+        novo_telefone = input(f"Novo Telefone (Atual: {telefone_atual}): ") or telefone_atual
 
-            # Coleta dados atuais para usar como padrão
-            query_fornecedor_data = f"SELECT razaoSocial, nomeFantasia, email, telefone FROM fornecedores WHERE cnpj = '{cnpj}'"
-            df_fornecedor_data = oracle.sqlToDataFrame(query_fornecedor_data)
-            if df_fornecedor_data.empty:
-                print("Erro ao recuperar dados do fornecedor.")
-                return None
+        # Coleta novos dados do Endereço (se existir)
+        endereco_para_atualizar = False
+        novo_logradouro = None
+        novo_numero = None
 
-            fornecedor_data = df_fornecedor_data.iloc[0]
-            razao_atual = fornecedor_data["razaoSocial"]
-            fantasia_atual = fornecedor_data["nomeFantasia"]
-            email_atual = fornecedor_data["email"]
-            telefone_atual = fornecedor_data["telefone"]
+        # Verifica se existe endereço cadastrado
+        query_endereco = f"SELECT logradouro, numero FROM enderecos WHERE id_fornecedor = {id_fornecedor}"
+        df_endereco = oracle.sqlToDataFrame(query_endereco)
 
-            # Coleta novos dados do Fornecedor
-            nova_razao = input(f"Nova Razão Social (Atual: {razao_atual}): ") or razao_atual
-            novo_nome_fantasia = input(f"Novo Nome Fantasia (Atual: {fantasia_atual}): ") or fantasia_atual
-            novo_email = input(f"Novo E-mail (Atual: {email_atual}): ") or email_atual
-            novo_telefone = input(f"Novo Telefone (Atual: {telefone_atual}): ") or telefone_atual
+        if not df_endereco.empty:
+            endereco_para_atualizar = True
+            endereco_data = df_endereco.iloc[0]
+            logradouro_atual = endereco_data["logradouro"]
+            numero_atual = endereco_data["numero"]
 
-            # Coleta novos dados do Endereço (se existir)
-            endereco_para_atualizar = False
-            novo_logradouro = None
-            novo_numero = None
+            novo_logradouro = input(f"Novo Logradouro (Atual: {logradouro_atual}): ") or logradouro_atual
+            novo_numero = input(f"Novo Número (Atual: {numero_atual}): ") or str(numero_atual)
+        else:
+            print("  ⚠️  Este fornecedor não possui endereço cadastrado")
+            deseja_cadastrar = input("  Deseja cadastrar um endereço agora? (s/n): ").lower()
+            if deseja_cadastrar == 's':
+                # Aqui você poderia implementar lógica para adicionar endereço
+                print("  Funcionalidade de adicionar endereço ainda não implementada")
 
-            # Verifica se existe endereço cadastrado
-            query_endereco = f"SELECT logradouro, numero FROM enderecos WHERE id_fornecedor = {id_fornecedor}"
-            df_endereco = oracle.sqlToDataFrame(query_endereco)
+        # 1. Atualiza no BD (FORNECEDORES)
+        sql_update_forn = f"""
+            UPDATE fornecedores
+            SET razaoSocial = '{nova_razao}', nomeFantasia = '{novo_nome_fantasia}', email = '{novo_email}', telefone = '{novo_telefone}'
+            WHERE cnpj = '{cnpj}'
+        """
+        oracle.write(sql_update_forn)
 
-            if not df_endereco.empty:
-                endereco_para_atualizar = True
-                endereco_data = df_endereco.iloc[0]
-                logradouro_atual = endereco_data["logradouro"]
-                numero_atual = endereco_data["numero"]
+        # 2. Atualiza no BD (ENDERECOS) se existir
+        if endereco_para_atualizar:
+            try:
+                num_int_update = int(novo_numero)
+            except ValueError:
+                num_int_update = 'NULL'
 
-                novo_logradouro = input(f"Novo Logradouro (Atual: {logradouro_atual}): ") or logradouro_atual
-                novo_numero = input(f"Novo Número (Atual: {numero_atual}): ") or str(numero_atual)
-            else:
-                print("  ⚠️  Este fornecedor não possui endereço cadastrado")
-                deseja_cadastrar = input("  Deseja cadastrar um endereço agora? (s/n): ").lower()
-                if deseja_cadastrar == 's':
-                    # Aqui você poderia implementar lógica para adicionar endereço
-                    print("  Funcionalidade de adicionar endereço ainda não implementada")
-
-            # 1. Atualiza no BD (FORNECEDORES)
-            sql_update_forn = f"""
-                UPDATE fornecedores
-                SET razaoSocial = '{nova_razao}', nomeFantasia = '{novo_nome_fantasia}', email = '{novo_email}', telefone = '{novo_telefone}'
-                WHERE cnpj = '{cnpj}'
+            sql_update_endereco = f"""
+                UPDATE enderecos
+                SET logradouro = '{novo_logradouro}', numero = {num_int_update}
+                WHERE id_fornecedor = {id_fornecedor}
             """
-            oracle.write(sql_update_forn)
+            oracle.write(sql_update_endereco)
 
-            # 2. Atualiza no BD (ENDERECOS) se existir
-            if endereco_para_atualizar:
-                try:
-                    num_int_update = int(novo_numero)
-                except ValueError:
-                    num_int_update = 'NULL'
+        # Recupera o fornecedor atualizado
+        fornecedor_atualizado = self._recupera_fornecedor(oracle, cnpj)
 
-                sql_update_endereco = f"""
-                    UPDATE enderecos
-                    SET logradouro = '{novo_logradouro}', numero = {num_int_update}
-                    WHERE id_fornecedor = {id_fornecedor}
-                """
-                oracle.write(sql_update_endereco)
+        print("\n✅ Fornecedor atualizado com sucesso!")
+        if fornecedor_atualizado:
+            print(f"CNPJ: {fornecedor_atualizado.cnpj} | Nome Fantasia: {fornecedor_atualizado.nomeFantasia}")
+        else:
+            # Mostra informações básicas se não conseguir recuperar com endereço
+            query_final = f"SELECT cnpj, razaoSocial, nomeFantasia FROM fornecedores WHERE cnpj = '{cnpj}'"
+            df_final = oracle.sqlToDataFrame(query_final)
+            if not df_final.empty:
+                info = df_final.iloc[0]
+                print(f"CNPJ: {info['cnpj']} | Razão Social: {info['razaosocial']} | Nome Fantasia: {info['nomefantasia']}")
 
-            # Recupera o fornecedor atualizado
-            fornecedor_atualizado = self._recupera_fornecedor(oracle, cnpj)
+        # Pergunta se deseja atualizar outro fornecedor
+        continuar = input("\nDeseja atualizar outro fornecedor? (s/n): ").lower()
+        if continuar == 's':
+            return self.atualizarFornecedor()
 
-            print("\n✅ Fornecedor atualizado com sucesso!")
-            if fornecedor_atualizado:
-                print(f"CNPJ: {fornecedor_atualizado.cnpj} | Nome Fantasia: {fornecedor_atualizado.nomeFantasia}")
-            else:
-                # Mostra informações básicas se não conseguir recuperar com endereço
-                query_final = f"SELECT cnpj, razaoSocial, nomeFantasia FROM fornecedores WHERE cnpj = '{cnpj}'"
-                df_final = oracle.sqlToDataFrame(query_final)
-                if not df_final.empty:
-                    info = df_final.iloc[0]
-                    print(f"CNPJ: {info['cnpj']} | Razão Social: {info['razaoSocial']} | Nome Fantasia: {info['nomeFantasia']}")
-
-            # Pergunta se deseja atualizar outro fornecedor
-            continuar = input("\nDeseja atualizar outro fornecedor? (s/n): ").lower()
-            if continuar != 's':
-                return fornecedor_atualizado
+        return fornecedor_atualizado
 
     def deletarFornecedor(self):
         # Cria uma nova conexão com o banco que permite alteração
@@ -395,7 +403,7 @@ class Cont_Fornecedor:
 
             print("\n--- Fornecedores Cadastrados ---")
             for idx, row in df_fornecedores.iterrows():
-                print(f"{idx + 1}. CNPJ: {row['cnpj']} | Nome: {row['nomeFantasia']}")
+                print(f"{idx + 1}. CNPJ: {row['cnpj']} | Nome: {row['nomefantasia']}")
 
             # Solicita ao usuário qual fornecedor deseja excluir
             selecao = input("\nDigite o número do fornecedor para excluir (ou 0 para voltar): ")

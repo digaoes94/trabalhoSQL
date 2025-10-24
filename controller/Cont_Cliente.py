@@ -272,180 +272,190 @@ class Cont_Cliente:
             cliente_selecionado = df_clientes.iloc[idx_selecionado]
             cpf = cliente_selecionado['cpf']
 
-        # Verifica se o cliente existe na base de dados (se retorna True, NÃO existe)
-        if self.verifica_existencia_cliente(oracle, cpf):
-            print(f"O CPF {cpf} não existe.")
+            # Verifica se o cliente existe na base de dados (se retorna True, NÃO existe)
+            if self.verifica_existencia_cliente(oracle, cpf):
+                print(f"O CPF {cpf} não existe.")
+                continue
+
+            # Cliente existe, proceder com a atualização
+            break
+
+        # Se saiu do loop com selecao == '0', retorna
+        if selecao == '0':
             return None
+
+        # Se chegou aqui, cliente_selecionado foi selecionado com sucesso
+        # Recupera o ID do cliente de forma segura
+        id_cliente = self._recupera_id_cliente(oracle, cpf)
+
+        if id_cliente is None:
+            print(f"Erro ao recuperar dados do cliente com CPF {cpf}.")
+            return None
+
+        # Tenta recuperar o cliente completo (com endereço)
+        cliente_existente = self._recupera_cliente(oracle, cpf)
+
+        # Exibe dados atuais (com tratamento para quando não tem endereço)
+        if cliente_existente:
+            print(f"\nDados atuais do Cliente: {cliente_existente.to_string()}")
+            print(f"Endereço atual: {cliente_existente.endereco.to_string()}")
         else:
-            # Recupera o ID do cliente de forma segura
-            id_cliente = self._recupera_id_cliente(oracle, cpf)
+            # Se não tem endereço, busca informações básicas
+            query_info = f"SELECT cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
+            df_info = oracle.sqlToDataFrame(query_info)
+            if not df_info.empty:
+                info = df_info.iloc[0]
+                print(f"\nDados atuais do Cliente:")
+                print(f"  CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']} | Telefone: {info['telefone']}")
+                print("  Obs: Endereço não cadastrado para este cliente")
 
-            if id_cliente is None:
-                print(f"Erro ao recuperar dados do cliente com CPF {cpf}.")
-                return None
+        # Coleta dados atuais para usar como padrão
+        query_cliente_data = f"SELECT nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
+        df_cliente_data = oracle.sqlToDataFrame(query_cliente_data)
+        if df_cliente_data.empty:
+            print("Erro ao recuperar dados do cliente.")
+            return None
 
-            # Tenta recuperar o cliente completo (com endereço)
-            cliente_existente = self._recupera_cliente(oracle, cpf)
+        cliente_data = df_cliente_data.iloc[0]
+        nome_atual = cliente_data["nome"]
+        email_atual = cliente_data["email"]
+        telefone_atual = cliente_data["telefone"]
 
-            # Exibe dados atuais (com tratamento para quando não tem endereço)
-            if cliente_existente:
-                print(f"\nDados atuais do Cliente: {cliente_existente.to_string()}")
-                print(f"Endereço atual: {cliente_existente.endereco.to_string()}")
-            else:
-                # Se não tem endereço, busca informações básicas
-                query_info = f"SELECT cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
-                df_info = oracle.sqlToDataFrame(query_info)
-                if not df_info.empty:
-                    info = df_info.iloc[0]
-                    print(f"\nDados atuais do Cliente:")
-                    print(f"  CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']} | Telefone: {info['telefone']}")
-                    print("  Obs: Endereço não cadastrado para este cliente")
+        # Coleta novos dados do Cliente
+        novo_nome = input(f"Novo nome (Atual: {nome_atual}): ") or nome_atual
+        novo_email = input(f"Novo e-mail (Atual: {email_atual}): ") or email_atual
+        novo_telefone = input(f"Novo telefone (Atual: {telefone_atual}): ") or telefone_atual
 
-            # Coleta dados atuais para usar como padrão
-            query_cliente_data = f"SELECT nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
-            df_cliente_data = oracle.sqlToDataFrame(query_cliente_data)
-            if df_cliente_data.empty:
-                print("Erro ao recuperar dados do cliente.")
-                return None
+        # Coleta novos dados do Endereço (se existir)
+        endereco_para_atualizar = False
+        novo_logradouro = None
+        novo_numero = None
+        novo_cep = None
+        novo_complemento = None
+        novo_bairro = None
+        novo_cidade = None
+        novo_estado = None
 
-            cliente_data = df_cliente_data.iloc[0]
-            nome_atual = cliente_data["nome"]
-            email_atual = cliente_data["email"]
-            telefone_atual = cliente_data["telefone"]
+        # Verifica se existe endereço cadastrado
+        query_endereco = f"SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM enderecos WHERE id_cliente = {id_cliente}"
+        df_endereco = oracle.sqlToDataFrame(query_endereco)
 
-            # Coleta novos dados do Cliente
-            novo_nome = input(f"Novo nome (Atual: {nome_atual}): ") or nome_atual
-            novo_email = input(f"Novo e-mail (Atual: {email_atual}): ") or email_atual
-            novo_telefone = input(f"Novo telefone (Atual: {telefone_atual}): ") or telefone_atual
+        if not df_endereco.empty:
+            endereco_para_atualizar = True
+            endereco_data = df_endereco.iloc[0]
+            cep_atual = endereco_data["cep"]
+            logradouro_atual = endereco_data["logradouro"]
+            numero_atual = endereco_data["numero"]
+            complemento_atual = endereco_data["complemento"]
+            bairro_atual = endereco_data["bairro"]
+            cidade_atual = endereco_data["cidade"]
+            estado_atual = endereco_data["estado"]
 
-            # Coleta novos dados do Endereço (se existir)
-            endereco_para_atualizar = False
-            novo_logradouro = None
-            novo_numero = None
-            novo_cep = None
-            novo_complemento = None
-            novo_bairro = None
-            novo_cidade = None
-            novo_estado = None
+            novo_cep = input(f"Novo CEP (Atual: {cep_atual}): ") or cep_atual
+            # Validar CEP se foi digitado novo
+            if novo_cep != cep_atual:
+                while True:
+                    try:
+                        novo_cep = self._validar_e_formatar_cep(novo_cep)
+                        break
+                    except ValueError as e:
+                        print(f"❌ {e}")
+                        novo_cep = input("CEP (formato: 12345-678 ou 12345678): ") or cep_atual
 
-            # Verifica se existe endereço cadastrado
-            query_endereco = f"SELECT cep, logradouro, numero, complemento, bairro, cidade, estado FROM enderecos WHERE id_cliente = {id_cliente}"
-            df_endereco = oracle.sqlToDataFrame(query_endereco)
+            novo_logradouro = input(f"Novo Logradouro (Atual: {logradouro_atual}): ") or logradouro_atual
+            novo_numero = input(f"Novo Número (Atual: {numero_atual}): ") or str(numero_atual)
+            novo_complemento = input(f"Novo Complemento (Atual: {complemento_atual}): ") or complemento_atual
+            novo_bairro = input(f"Novo Bairro (Atual: {bairro_atual}): ") or bairro_atual
+            novo_cidade = input(f"Novo Cidade (Atual: {cidade_atual}): ") or cidade_atual
+            novo_estado = input(f"Novo Estado (Atual: {estado_atual}): ") or estado_atual
 
-            if not df_endereco.empty:
+            # Validar Estado se foi digitado novo
+            if novo_estado != estado_atual:
+                while True:
+                    try:
+                        novo_estado = self._validar_uf(novo_estado)
+                        break
+                    except ValueError as e:
+                        print(f"❌ {e}")
+                        novo_estado = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ") or estado_atual
+        else:
+            print("  ⚠️  Este cliente não possui endereço cadastrado")
+            deseja_cadastrar = input("  Deseja cadastrar um endereço agora? (s/n): ").lower()
+            if deseja_cadastrar == 's':
+                # Implementação para adicionar endereço
                 endereco_para_atualizar = True
-                endereco_data = df_endereco.iloc[0]
-                cep_atual = endereco_data["cep"]
-                logradouro_atual = endereco_data["logradouro"]
-                numero_atual = endereco_data["numero"]
-                complemento_atual = endereco_data["complemento"]
-                bairro_atual = endereco_data["bairro"]
-                cidade_atual = endereco_data["cidade"]
-                estado_atual = endereco_data["estado"]
 
-                novo_cep = input(f"Novo CEP (Atual: {cep_atual}): ") or cep_atual
-                # Validar CEP se foi digitado novo
-                if novo_cep != cep_atual:
-                    while True:
-                        try:
-                            novo_cep = self._validar_e_formatar_cep(novo_cep)
-                            break
-                        except ValueError as e:
-                            print(f"❌ {e}")
-                            novo_cep = input("CEP (formato: 12345-678 ou 12345678): ") or cep_atual
+                print("\n--- Cadastrar Endereço ---")
+                while True:
+                    try:
+                        cep_entrada = input("CEP (formato: 12345-678 ou 12345678): ")
+                        novo_cep = self._validar_e_formatar_cep(cep_entrada)
+                        break
+                    except ValueError as e:
+                        print(f"❌ {e}")
+                        continue
 
-                novo_logradouro = input(f"Novo Logradouro (Atual: {logradouro_atual}): ") or logradouro_atual
-                novo_numero = input(f"Novo Número (Atual: {numero_atual}): ") or str(numero_atual)
-                novo_complemento = input(f"Novo Complemento (Atual: {complemento_atual}): ") or complemento_atual
-                novo_bairro = input(f"Novo Bairro (Atual: {bairro_atual}): ") or bairro_atual
-                novo_cidade = input(f"Novo Cidade (Atual: {cidade_atual}): ") or cidade_atual
-                novo_estado = input(f"Novo Estado (Atual: {estado_atual}): ") or estado_atual
+                novo_logradouro = input("Logradouro: ")
+                novo_numero = input("Número: ")
+                novo_complemento = input("Complemento (opcional): ")
+                novo_bairro = input("Bairro: ")
+                novo_cidade = input("Cidade: ")
 
-                # Validar Estado se foi digitado novo
-                if novo_estado != estado_atual:
-                    while True:
-                        try:
-                            novo_estado = self._validar_uf(novo_estado)
-                            break
-                        except ValueError as e:
-                            print(f"❌ {e}")
-                            novo_estado = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ") or estado_atual
-            else:
-                print("  ⚠️  Este cliente não possui endereço cadastrado")
-                deseja_cadastrar = input("  Deseja cadastrar um endereço agora? (s/n): ").lower()
-                if deseja_cadastrar == 's':
-                    # Implementação para adicionar endereço
-                    endereco_para_atualizar = True
+                # Validar Estado (UF)
+                while True:
+                    try:
+                        estado_entrada = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ")
+                        novo_estado = self._validar_uf(estado_entrada)
+                        break
+                    except ValueError as e:
+                        print(f"❌ {e}")
+                        continue
 
-                    print("\n--- Cadastrar Endereço ---")
-                    while True:
-                        try:
-                            cep_entrada = input("CEP (formato: 12345-678 ou 12345678): ")
-                            novo_cep = self._validar_e_formatar_cep(cep_entrada)
-                            break
-                        except ValueError as e:
-                            print(f"❌ {e}")
-                            continue
-
-                    novo_logradouro = input("Logradouro: ")
-                    novo_numero = input("Número: ")
-                    novo_complemento = input("Complemento (opcional): ")
-                    novo_bairro = input("Bairro: ")
-                    novo_cidade = input("Cidade: ")
-
-                    # Validar Estado (UF)
-                    while True:
-                        try:
-                            estado_entrada = input("Estado (UF) (ex: ES, SP, RJ ou nome completo): ")
-                            novo_estado = self._validar_uf(estado_entrada)
-                            break
-                        except ValueError as e:
-                            print(f"❌ {e}")
-                            continue
-
-                    # Inserir novo endereço no banco
-                    sql_novo_endereco = f"""
-                        INSERT INTO enderecos (id_endereco, cep, logradouro, numero, complemento, bairro, cidade, estado, id_cliente)
-                        VALUES (enderecos_id_seq.NEXTVAL, '{novo_cep}', '{novo_logradouro}', {int(novo_numero) if novo_numero else 'NULL'}, '{novo_complemento}', '{novo_bairro}', '{novo_cidade}', '{novo_estado}', {id_cliente})
-                    """
-                    oracle.write(sql_novo_endereco)
-
-            # 1. Atualiza no BD (CLIENTES)
-            sql_update_cliente = f"""
-                UPDATE clientes
-                SET nome = '{novo_nome}', email = '{novo_email}', telefone = '{novo_telefone}'
-                WHERE cpf = '{cpf}'
-            """
-            oracle.write(sql_update_cliente)
-
-            # 2. Atualiza no BD (ENDERECOS) se existir
-            if endereco_para_atualizar and df_endereco.empty == False:
-                sql_update_endereco = f"""
-                    UPDATE enderecos
-                    SET cep = '{novo_cep}', logradouro = '{novo_logradouro}', numero = {int(novo_numero) if novo_numero else 'NULL'},
-                        complemento = '{novo_complemento}', bairro = '{novo_bairro}', cidade = '{novo_cidade}', estado = '{novo_estado}'
-                    WHERE id_cliente = {id_cliente}
+                # Inserir novo endereço no banco
+                sql_novo_endereco = f"""
+                    INSERT INTO enderecos (id_endereco, cep, logradouro, numero, complemento, bairro, cidade, estado, id_cliente)
+                    VALUES (enderecos_id_seq.NEXTVAL, '{novo_cep}', '{novo_logradouro}', {int(novo_numero) if novo_numero else 'NULL'}, '{novo_complemento}', '{novo_bairro}', '{novo_cidade}', '{novo_estado}', {id_cliente})
                 """
-                oracle.write(sql_update_endereco)
+                oracle.write(sql_novo_endereco)
 
-            # 3. Recupera o cliente atualizado
-            cliente_atualizado = self._recupera_cliente(oracle, cpf)
+        # 1. Atualiza no BD (CLIENTES)
+        sql_update_cliente = f"""
+            UPDATE clientes
+            SET nome = '{novo_nome}', email = '{novo_email}', telefone = '{novo_telefone}'
+            WHERE cpf = '{cpf}'
+        """
+        oracle.write(sql_update_cliente)
 
-            print("\n✅ Cliente atualizado com sucesso!")
-            if cliente_atualizado:
-                print(cliente_atualizado.to_string())
-            else:
-                # Mostra informações básicas se não conseguir recuperar com endereço
-                query_final = f"SELECT cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
-                df_final = oracle.sqlToDataFrame(query_final)
-                if not df_final.empty:
-                    info = df_final.iloc[0]
-                    print(f"CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']} | Telefone: {info['telefone']}")
+        # 2. Atualiza no BD (ENDERECOS) se existir
+        if endereco_para_atualizar and df_endereco.empty == False:
+            sql_update_endereco = f"""
+                UPDATE enderecos
+                SET cep = '{novo_cep}', logradouro = '{novo_logradouro}', numero = {int(novo_numero) if novo_numero else 'NULL'},
+                    complemento = '{novo_complemento}', bairro = '{novo_bairro}', cidade = '{novo_cidade}', estado = '{novo_estado}'
+                WHERE id_cliente = {id_cliente}
+            """
+            oracle.write(sql_update_endereco)
 
-            # Pergunta se deseja atualizar outro cliente
-            continuar = input("\nDeseja atualizar outro cliente? (s/n): ").lower()
-            if continuar != 's':
-                return cliente_atualizado
+        # 3. Recupera o cliente atualizado
+        cliente_atualizado = self._recupera_cliente(oracle, cpf)
+
+        print("\n✅ Cliente atualizado com sucesso!")
+        if cliente_atualizado:
+            print(cliente_atualizado.to_string())
+        else:
+            # Mostra informações básicas se não conseguir recuperar com endereço
+            query_final = f"SELECT cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
+            df_final = oracle.sqlToDataFrame(query_final)
+            if not df_final.empty:
+                info = df_final.iloc[0]
+                print(f"CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']} | Telefone: {info['telefone']}")
+
+        # Pergunta se deseja atualizar outro cliente
+        continuar = input("\nDeseja atualizar outro cliente? (s/n): ").lower()
+        if continuar == 's':
+            return self.atualizarCliente()
+
+        return cliente_atualizado
 
     def deletarCliente(self):
         # Cria uma nova conexão com o banco que permite alteração
