@@ -9,10 +9,11 @@ erDiagram
 
     fornecedores {
         NUMBER id_fornecedor PK
-        VARCHAR2 nome "NOT NULL"
         VARCHAR2 cnpj UK "UNIQUE NOT NULL"
-        VARCHAR2 telefone
+        VARCHAR2 razaoSocial "NOT NULL"
+        VARCHAR2 nomeFantasia
         VARCHAR2 email
+        VARCHAR2 telefone
     }
 
     enderecos {
@@ -45,14 +46,14 @@ erDiagram
 
     vendas {
         NUMBER id_venda PK
-        DATE data_venda "NOT NULL"
+        TIMESTAMP data_venda "NOT NULL"
         NUMBER valor_total
         NUMBER id_cliente FK
     }
 
     compras {
         NUMBER id_compra PK
-        DATE data_compra "NOT NULL"
+        TIMESTAMP data_compra "NOT NULL"
         NUMBER valor_total
         NUMBER id_fornecedor FK
     }

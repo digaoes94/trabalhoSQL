@@ -239,12 +239,23 @@ class Relatorio:
                 for index, row in df.iterrows():
                     print(f"💰 VENDA {index + 1}")
                     print(f"   ID: {row['id_venda']}")
-                    print(f"   Data: {row['data_venda']}")
+                    # Formata a data corretamente
+                    data_venda = row['data_venda']
+                    if pd.notna(data_venda):
+                        if hasattr(data_venda, 'strftime'):
+                            data_formatada = data_venda.strftime('%d/%m/%Y %H:%M:%S')
+                        else:
+                            data_formatada = str(data_venda)
+                    else:
+                        data_formatada = "Data não disponível"
+                    print(f"   Data: {data_formatada}")
                     print(f"   Cliente: {row['nome_cliente']}")
                     print(f"   CPF: {row['cpf_cliente']}")
                     print(f"   Email: {row['email_cliente']}")
                     print(f"   Telefone: {row['telefone_cliente']}")
-                    print(f"   Total de itens: {row['total_itens']}")
+                    # Converte total_itens para int se não for None
+                    total_itens = int(row['total_itens']) if pd.notna(row['total_itens']) else 0
+                    print(f"   Total de itens: {total_itens}")
                     print(f"   💵 Valor Total: R$ {row['valor_total']:.2f}")
                     print("-" * 80)
         finally:

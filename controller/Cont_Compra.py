@@ -4,7 +4,7 @@ from model.Fornecedor import Fornecedor
 from model.Produto import Produto
 from conexion.oracle_queries import OracleQueries
 # O uso de datetime é necessário para as datas
-from datetime import date
+from datetime import datetime
 # Se for usar pandas para manipulação de DataFrame:
 # import pandas as pd 
 
@@ -119,7 +119,7 @@ class Cont_Compra:
 
         # 2. Gera ID e Data
         id_compra = self._get_next_id(oracle)
-        data_compra = date.today()
+        data_compra = datetime.now()
         
         # 3. Cria o objeto Compra inicial
         nova_compra = Compra(id_compra=id_compra, fornecedor=fornecedor_obj, data=data_compra, total=0.0)
@@ -199,9 +199,11 @@ class Cont_Compra:
         """ Persiste a Compra e todos os seus Itens e atualiza o Estoque. """
         
         # 1. Persiste a Compra principal
+        # Formata a data/hora no padrão Oracle: YYYY-MM-DD HH:MI:SS
+        data_formatada = compra.data.strftime('%Y-%m-%d %H:%M:%S') if hasattr(compra.data, 'strftime') else str(compra.data)
         sql_compra = f"""
-            INSERT INTO compras (id_compra, id_fornecedor, data_compra, valor_total) 
-            VALUES ({compra.id_compra}, {compra.fornecedor.id_fornecedor}, DATE '{compra.data}', {compra.total})
+            INSERT INTO compras (id_compra, id_fornecedor, data_compra, valor_total)
+            VALUES ({compra.id_compra}, {compra.fornecedor.id_fornecedor}, TO_TIMESTAMP('{data_formatada}', 'YYYY-MM-DD HH24:MI:SS'), {compra.total})
         """
         oracle.write(sql_compra)
         print("-> Compra persistida na tabela COMPRAS.")

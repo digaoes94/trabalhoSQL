@@ -195,8 +195,8 @@ class Cont_Cliente:
                     continue
             
             sql_cliente = f"""
-                INSERT INTO clientes (id_cliente, cpf, nome, email, telefone) 
-                VALUES (clientes_id_seq.NEXTVAL, '{cpf}', '{nome}', '{email}', '{telefone_str}')
+                INSERT INTO clientes (cpf, nome, email, telefone)
+                VALUES ('{cpf}', '{nome}', '{email}', '{telefone_str}')
             """
             oracle.write(sql_cliente)
 

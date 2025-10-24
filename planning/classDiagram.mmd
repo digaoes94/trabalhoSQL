@@ -5,9 +5,9 @@ classDiagram
         -String cnpj
         -String razaoSocial
         -String nomeFantasia
-        -Endereco endereco
         -String email
-        -List telefone
+        -String telefone
+        -Endereco endereco
 
         +pesquisarFornecedor(cnpj)
         +novoFornecedor()
@@ -29,7 +29,7 @@ classDiagram
         +Integer id_compra
         -Fornecedor fornecedor
         -List itens
-        -Date data
+        -DateTime data
         -Double total
 
         +novaCompra()
@@ -65,7 +65,7 @@ classDiagram
         +Integer id_venda
         -Cliente cliente
         -List itens
-        -Date data
+        -DateTime data
         -Double total
 
         +novaVenda()

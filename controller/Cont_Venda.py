@@ -3,7 +3,7 @@ from model.ItemVenda import ItemVenda
 from model.Cliente import Cliente
 from model.Produto import Produto
 from conexion.oracle_queries import OracleQueries
-from datetime import date
+from datetime import datetime
 import pandas as pd # Necessário para o método de estoque
 
 class Cont_Venda:
@@ -109,7 +109,7 @@ class Cont_Venda:
 
         # 2. Gera ID e Data
         id_venda = self._get_next_id(oracle)
-        data_venda = date.today()
+        data_venda = datetime.now()
         
         # 3. Cria o objeto Venda inicial
         nova_venda = Venda(id_venda=id_venda, cliente=cliente_obj, data=data_venda, total=0.0)
@@ -207,9 +207,11 @@ class Cont_Venda:
         """ Persiste a Venda e todos os seus Itens e atualiza o Estoque (CMV). """
         
         # 1. Persiste a Venda principal
+        # Formata a data/hora no padrão Oracle: YYYY-MM-DD HH:MI:SS
+        data_formatada = venda.data.strftime('%Y-%m-%d %H:%M:%S') if hasattr(venda.data, 'strftime') else str(venda.data)
         sql_venda = f"""
-            INSERT INTO vendas (id_venda, id_cliente, data_venda, valor_total) 
-            VALUES ({venda.id_venda}, {venda.cliente.id_cliente}, DATE '{venda.data}', {venda.total})
+            INSERT INTO vendas (id_venda, id_cliente, data_venda, valor_total)
+            VALUES ({venda.id_venda}, {venda.cliente.id_cliente}, TO_TIMESTAMP('{data_formatada}', 'YYYY-MM-DD HH24:MI:SS'), {venda.total})
         """
         oracle.write(sql_venda)
         print("-> Venda persistida na tabela VENDAS.")

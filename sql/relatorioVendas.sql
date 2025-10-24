@@ -5,7 +5,7 @@ SELECT v.id_venda as id_venda
      , c.email as email_cliente
      , c.telefone as telefone_cliente
      , v.valor_total as valor_total
-     , (SELECT COUNT(*) FROM item_venda iv WHERE iv.id_venda = v.id_venda) as total_itens
+     , (SELECT SUM(quantidade) FROM item_venda iv WHERE iv.id_venda = v.id_venda) as total_itens
   FROM vendas v
   INNER JOIN clientes c ON v.id_cliente = c.id_cliente
  ORDER BY v.data_venda DESC
