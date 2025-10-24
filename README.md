@@ -89,7 +89,7 @@ trabalhoSQL/
 
 ```bash
 # Abra um terminal e execute:
-cd database
+cd ~/database_services
 
 # Inicie o Docker Compose
 docker-compose up -d
