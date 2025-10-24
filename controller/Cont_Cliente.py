@@ -240,8 +240,37 @@ class Cont_Cliente:
         oracle = OracleQueries(can_write=True)
         oracle.connect()
 
-        # Solicita ao usuário o código do cliente a ser alterado
-        cpf = input("CPF do cliente que deseja alterar: ")
+        # Loop para atualizar múltiplos clientes
+        while True:
+            # Lista clientes cadastrados
+            query_clientes = "SELECT id_cliente, cpf, nome FROM clientes ORDER BY nome"
+            df_clientes = oracle.sqlToDataFrame(query_clientes)
+
+            if df_clientes.empty:
+                print("Nenhum cliente cadastrado.")
+                return None
+
+            print("\n--- Clientes Cadastrados ---")
+            for idx, row in df_clientes.iterrows():
+                print(f"{idx + 1}. CPF: {row['cpf']} | Nome: {row['nome']}")
+
+            # Solicita ao usuário qual cliente deseja alterar
+            selecao = input("\nDigite o número do cliente para atualizar (ou 0 para voltar): ")
+
+            if selecao == '0':
+                break
+
+            try:
+                idx_selecionado = int(selecao) - 1
+                if idx_selecionado < 0 or idx_selecionado >= len(df_clientes):
+                    print("❌ Opção inválida!")
+                    continue
+            except ValueError:
+                print("❌ Entrada inválida!")
+                continue
+
+            cliente_selecionado = df_clientes.iloc[idx_selecionado]
+            cpf = cliente_selecionado['cpf']
 
         # Verifica se o cliente existe na base de dados (se retorna True, NÃO existe)
         if self.verifica_existencia_cliente(oracle, cpf):
@@ -412,26 +441,49 @@ class Cont_Cliente:
                 if not df_final.empty:
                     info = df_final.iloc[0]
                     print(f"CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']} | Telefone: {info['telefone']}")
-            return cliente_atualizado
+
+            # Pergunta se deseja atualizar outro cliente
+            continuar = input("\nDeseja atualizar outro cliente? (s/n): ").lower()
+            if continuar != 's':
+                return cliente_atualizado
 
     def deletarCliente(self):
         # Cria uma nova conexão com o banco que permite alteração
         oracle = OracleQueries(can_write=True)
         oracle.connect()
 
-        # Solicita ao usuário o CPF do Cliente a ser excluído
-        cpf = input("CPF do Cliente que irá excluir: ")
+        # Loop para deletar múltiplos clientes
+        while True:
+            # Lista clientes cadastrados
+            query_clientes = "SELECT id_cliente, cpf, nome FROM clientes ORDER BY nome"
+            df_clientes = oracle.sqlToDataFrame(query_clientes)
 
-        # Verifica se o cliente existe na base de dados
-        if self.verifica_existencia_cliente(oracle, cpf):
-            print(f"O CPF {cpf} não existe.")
-        else:
-            # Recupera o ID do cliente de forma segura (sem necessidade de endereço)
-            id_cliente = self._recupera_id_cliente(oracle, cpf)
-
-            if id_cliente is None:
-                print(f"Erro ao recuperar dados do cliente com CPF {cpf}.")
+            if df_clientes.empty:
+                print("Nenhum cliente cadastrado.")
                 return
+
+            print("\n--- Clientes Cadastrados ---")
+            for idx, row in df_clientes.iterrows():
+                print(f"{idx + 1}. CPF: {row['cpf']} | Nome: {row['nome']}")
+
+            # Solicita ao usuário qual cliente deseja excluir
+            selecao = input("\nDigite o número do cliente para excluir (ou 0 para voltar): ")
+
+            if selecao == '0':
+                break
+
+            try:
+                idx_selecionado = int(selecao) - 1
+                if idx_selecionado < 0 or idx_selecionado >= len(df_clientes):
+                    print("❌ Opção inválida!")
+                    continue
+            except ValueError:
+                print("❌ Entrada inválida!")
+                continue
+
+            cliente_selecionado = df_clientes.iloc[idx_selecionado]
+            cpf = cliente_selecionado['cpf']
+            id_cliente = int(cliente_selecionado['id_cliente'])
 
             # Verifica se existem vendas associadas ao cliente
             query_vendas = f"SELECT COUNT(*) as qtde FROM vendas WHERE id_cliente = {id_cliente}"
@@ -439,17 +491,24 @@ class Cont_Cliente:
             qtde_vendas = int(df_vendas.iloc[0]["qtde"])
 
             if qtde_vendas > 0:
-                # Busca o nome do cliente para exibição
-                query_nome = f"SELECT nome FROM clientes WHERE id_cliente = {id_cliente}"
-                df_nome = oracle.sqlToDataFrame(query_nome)
-                nome_cliente = df_nome.iloc[0]["nome"] if not df_nome.empty else "Desconhecido"
-
-                print(f"\n⚠️  Não é possível excluir o cliente '{nome_cliente}'")
+                print(f"\n⚠️  Não é possível excluir o cliente '{cliente_selecionado['nome']}'")
                 print(f"Motivo: Existem {qtde_vendas} venda(s) associada(s) a este cliente")
-                print("\n💡 Dica: Remova as vendas associadas antes de deletar o cliente.")
-                return
+                print("💡 Dica: Remova as vendas associadas antes de deletar o cliente.")
+                continuar = input("\nDeseja tentar outro cliente? (s/n): ").lower()
+                if continuar != 's':
+                    break
+                continue
 
-            # Recupera os dados do cliente antes de excluir para exibição (tenta, mas não garante endereço)
+            # Pede confirmação
+            confirmacao = input(f"\nDeseja realmente excluir o cliente '{cliente_selecionado['nome']}'? (s/n): ").lower()
+            if confirmacao != 's':
+                print("Exclusão cancelada.")
+                continuar = input("Deseja excluir outro cliente? (s/n): ").lower()
+                if continuar != 's':
+                    break
+                continue
+
+            # Recupera os dados do cliente antes de excluir para exibição
             cliente_excluido = self._recupera_cliente(oracle, cpf)
 
             # 1. Deleta Endereço (tabela dependente)
@@ -466,11 +525,12 @@ class Cont_Cliente:
                 print(cliente_excluido.to_string())
             else:
                 # Se não conseguiu recuperar com endereço, mostra informações básicas
-                query_info = f"SELECT id_cliente, cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}' AND ROWNUM = 1"
-                df_info = oracle.sqlToDataFrame(query_info)
-                if not df_info.empty:
-                    info = df_info.iloc[0]
-                    print(f"CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']}")
+                print(f"CPF: {cpf} | Nome: {cliente_selecionado['nome']}")
+
+            # Pergunta se deseja deletar outro cliente
+            continuar = input("\nDeseja excluir outro cliente? (s/n): ").lower()
+            if continuar != 's':
+                break
             
     def verPedidos(self):
         oracle = OracleQueries(can_write=False) # Apenas leitura

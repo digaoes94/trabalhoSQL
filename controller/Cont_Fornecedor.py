@@ -233,7 +233,37 @@ class Cont_Fornecedor:
         oracle = OracleQueries(can_write=True)
         oracle.connect()
 
-        cnpj = input("CNPJ do Fornecedor que deseja alterar: ")
+        # Loop para atualizar múltiplos fornecedores
+        while True:
+            # Lista fornecedores cadastrados
+            query_fornecedores = "SELECT id_fornecedor, cnpj, nomeFantasia FROM fornecedores ORDER BY nomeFantasia"
+            df_fornecedores = oracle.sqlToDataFrame(query_fornecedores)
+
+            if df_fornecedores.empty:
+                print("Nenhum fornecedor cadastrado.")
+                return None
+
+            print("\n--- Fornecedores Cadastrados ---")
+            for idx, row in df_fornecedores.iterrows():
+                print(f"{idx + 1}. CNPJ: {row['cnpj']} | Nome: {row['nomeFantasia']}")
+
+            # Solicita ao usuário qual fornecedor deseja alterar
+            selecao = input("\nDigite o número do fornecedor para atualizar (ou 0 para voltar): ")
+
+            if selecao == '0':
+                break
+
+            try:
+                idx_selecionado = int(selecao) - 1
+                if idx_selecionado < 0 or idx_selecionado >= len(df_fornecedores):
+                    print("❌ Opção inválida!")
+                    continue
+            except ValueError:
+                print("❌ Entrada inválida!")
+                continue
+
+            fornecedor_selecionado = df_fornecedores.iloc[idx_selecionado]
+            cnpj = fornecedor_selecionado['cnpj']
 
         # Verifica se o fornecedor existe na base de dados (se retorna True, NÃO existe)
         if self.verifica_existencia_fornecedor(oracle, cnpj):
@@ -343,25 +373,48 @@ class Cont_Fornecedor:
                     info = df_final.iloc[0]
                     print(f"CNPJ: {info['cnpj']} | Razão Social: {info['razaoSocial']} | Nome Fantasia: {info['nomeFantasia']}")
 
-            return fornecedor_atualizado
+            # Pergunta se deseja atualizar outro fornecedor
+            continuar = input("\nDeseja atualizar outro fornecedor? (s/n): ").lower()
+            if continuar != 's':
+                return fornecedor_atualizado
 
     def deletarFornecedor(self):
         # Cria uma nova conexão com o banco que permite alteração
         oracle = OracleQueries(can_write=True)
         oracle.connect()
 
-        cnpj = input("CNPJ do Fornecedor que irá excluir: ")
+        # Loop para deletar múltiplos fornecedores
+        while True:
+            # Lista fornecedores cadastrados
+            query_fornecedores = "SELECT id_fornecedor, cnpj, nomeFantasia FROM fornecedores ORDER BY nomeFantasia"
+            df_fornecedores = oracle.sqlToDataFrame(query_fornecedores)
 
-        # Verifica se o fornecedor existe na base de dados
-        if self.verifica_existencia_fornecedor(oracle, cnpj):
-            print(f"O CNPJ {cnpj} não existe.")
-        else:
-            # Recupera o ID do fornecedor de forma segura (sem necessidade de endereço)
-            id_fornecedor = self._recupera_id_fornecedor(oracle, cnpj)
-
-            if id_fornecedor is None:
-                print(f"Erro ao recuperar dados do fornecedor com CNPJ {cnpj}.")
+            if df_fornecedores.empty:
+                print("Nenhum fornecedor cadastrado.")
                 return
+
+            print("\n--- Fornecedores Cadastrados ---")
+            for idx, row in df_fornecedores.iterrows():
+                print(f"{idx + 1}. CNPJ: {row['cnpj']} | Nome: {row['nomeFantasia']}")
+
+            # Solicita ao usuário qual fornecedor deseja excluir
+            selecao = input("\nDigite o número do fornecedor para excluir (ou 0 para voltar): ")
+
+            if selecao == '0':
+                break
+
+            try:
+                idx_selecionado = int(selecao) - 1
+                if idx_selecionado < 0 or idx_selecionado >= len(df_fornecedores):
+                    print("❌ Opção inválida!")
+                    continue
+            except ValueError:
+                print("❌ Entrada inválida!")
+                continue
+
+            fornecedor_selecionado = df_fornecedores.iloc[idx_selecionado]
+            cnpj = fornecedor_selecionado['cnpj']
+            id_fornecedor = int(fornecedor_selecionado['id_fornecedor'])
 
             # Verifica se existem compras associadas ao fornecedor
             query_compras = f"SELECT COUNT(*) as qtde FROM compras WHERE id_fornecedor = {id_fornecedor}"
@@ -369,17 +422,24 @@ class Cont_Fornecedor:
             qtde_compras = int(df_compras.iloc[0]["qtde"])
 
             if qtde_compras > 0:
-                # Busca o nome fantasia do fornecedor para exibição
-                query_nome = f"SELECT nomeFantasia FROM fornecedores WHERE id_fornecedor = {id_fornecedor}"
-                df_nome = oracle.sqlToDataFrame(query_nome)
-                nome_fantasia = df_nome.iloc[0]["nomeFantasia"] if not df_nome.empty else "Desconhecido"
-
-                print(f"\n⚠️  Não é possível excluir o fornecedor '{nome_fantasia}'")
+                print(f"\n⚠️  Não é possível excluir o fornecedor '{fornecedor_selecionado['nomeFantasia']}'")
                 print(f"Motivo: Existem {qtde_compras} compra(s) associada(s) a este fornecedor")
-                print("\n💡 Dica: Remova as compras associadas antes de deletar o fornecedor.")
-                return
+                print("💡 Dica: Remova as compras associadas antes de deletar o fornecedor.")
+                continuar = input("\nDeseja tentar outro fornecedor? (s/n): ").lower()
+                if continuar != 's':
+                    break
+                continue
 
-            # Recupera os dados do fornecedor antes de excluir para exibição (tenta, mas não garante endereço)
+            # Pede confirmação
+            confirmacao = input(f"\nDeseja realmente excluir o fornecedor '{fornecedor_selecionado['nomeFantasia']}'? (s/n): ").lower()
+            if confirmacao != 's':
+                print("Exclusão cancelada.")
+                continuar = input("Deseja excluir outro fornecedor? (s/n): ").lower()
+                if continuar != 's':
+                    break
+                continue
+
+            # Recupera os dados do fornecedor antes de excluir para exibição
             fornecedor_excluido = self._recupera_fornecedor(oracle, cnpj)
 
             # 1. Deleta Endereço (tabela dependente)
@@ -395,11 +455,12 @@ class Cont_Fornecedor:
                 print(f"CNPJ: {fornecedor_excluido.cnpj} | Nome Fantasia: {fornecedor_excluido.nomeFantasia}")
             else:
                 # Se não conseguiu recuperar com endereço, mostra informações básicas
-                query_info = f"SELECT cnpj, razaoSocial, nomeFantasia FROM fornecedores WHERE cnpj = '{cnpj}' AND ROWNUM = 1"
-                df_info = oracle.sqlToDataFrame(query_info)
-                if not df_info.empty:
-                    info = df_info.iloc[0]
-                    print(f"CNPJ: {info['cnpj']} | Razão Social: {info['razaoSocial']} | Nome Fantasia: {info['nomeFantasia']}")
+                print(f"CNPJ: {cnpj} | Nome: {fornecedor_selecionado['nomeFantasia']}")
+
+            # Pergunta se deseja deletar outro fornecedor
+            continuar = input("\nDeseja excluir outro fornecedor? (s/n): ").lower()
+            if continuar != 's':
+                break
             
     def verPedidos(self):
         # O método 'verPedidos' para Fornecedor será interpretado como 'ver Compras'
