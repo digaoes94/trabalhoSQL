@@ -170,29 +170,39 @@ class Cont_Produto:
         else:
             # Recupera o produto existente para preencher os valores antigos
             produto_existente = self._recupera_produto(oracle, id_produto)
+
+            if produto_existente is None:
+                print(f"Erro ao recuperar dados do produto com ID {id_produto}.")
+                return None
+
             print(f"\nDados atuais do Produto: {produto_existente.to_string()}")
-            
+
             # Coleta novos dados do Produto
             novo_nome = input(f"Novo nome (Atual: {produto_existente.nome}): ") or produto_existente.nome
-            
+
             novo_preco_str = input(f"Novo Preço Unitário (Atual: {produto_existente.preco}): ")
             novo_preco = float(novo_preco_str) if novo_preco_str else produto_existente.preco
-            
+
             nova_descricao = input(f"Nova Descrição (Atual: {produto_existente.descricao}): ") or produto_existente.descricao
-            
+
             # Atualiza no BD (PRODUTOS)
             sql_update_produto = f"""
-                UPDATE produtos 
-                SET nome = '{novo_nome}', preco_unitario = {novo_preco}, descricao = '{nova_descricao}' 
+                UPDATE produtos
+                SET nome = '{novo_nome}', preco_unitario = {novo_preco}, descricao = '{nova_descricao}'
                 WHERE id_produto = {id_produto}
             """
             oracle.write(sql_update_produto)
-            
+
             # Recupera o produto atualizado
             produto_atualizado = self._recupera_produto(oracle, id_produto)
-            
-            print("\nProduto atualizado com sucesso!")
-            print(produto_atualizado.to_string())
+
+            print("\n✅ Produto atualizado com sucesso!")
+            if produto_atualizado:
+                print(produto_atualizado.to_string())
+            else:
+                # Mostra informações básicas se algo der errado
+                print(f"ID: {id_produto} | Nome: {novo_nome} | Preço: R$ {novo_preco:.2f}")
+
             return produto_atualizado
 
     def deletarProduto(self):
@@ -201,7 +211,7 @@ class Cont_Produto:
         oracle.connect()
 
         # Solicita ao usuário o ID do Produto a ser excluído
-        id_produto = input("ID do Produto que irá excluir: ")        
+        id_produto = input("ID do Produto que irá excluir: ")
 
         # Tenta converter para int
         try:
@@ -211,17 +221,47 @@ class Cont_Produto:
             return
 
         # Verifica se o produto existe na base de dados
-        if self.verifica_existencia_produto(oracle, id_produto):            
+        if self.verifica_existencia_produto(oracle, id_produto):
             print(f"O Produto de ID {id_produto} não existe.")
         else:
             # Recupera os dados do produto antes de excluir para exibição
             produto_excluido = self._recupera_produto(oracle, id_produto)
-            
+
+            # Verifica se existem itens de compra associados
+            query_item_compra = f"SELECT COUNT(*) as qtde FROM item_compra WHERE id_produto = {id_produto}"
+            df_item_compra = oracle.sqlToDataFrame(query_item_compra)
+            qtde_item_compra = int(df_item_compra.iloc[0]["qtde"])
+
+            # Verifica se existem itens de venda associados
+            query_item_venda = f"SELECT COUNT(*) as qtde FROM item_venda WHERE id_produto = {id_produto}"
+            df_item_venda = oracle.sqlToDataFrame(query_item_venda)
+            qtde_item_venda = int(df_item_venda.iloc[0]["qtde"])
+
+            if qtde_item_compra > 0 or qtde_item_venda > 0:
+                print(f"\n⚠️  Não é possível excluir o produto '{produto_excluido.nome}'")
+                print(f"Motivo: Existem registros associados:")
+                if qtde_item_compra > 0:
+                    print(f"  - {qtde_item_compra} item(ns) em compras")
+                if qtde_item_venda > 0:
+                    print(f"  - {qtde_item_venda} item(ns) em vendas")
+                print("\n💡 Dica: Remova os registros de compra/venda associados antes de deletar o produto.")
+                return
+
+            # Verifica se existe estoque associado
+            query_estoque = f"SELECT COUNT(*) as qtde FROM estoque WHERE id_produto = {id_produto}"
+            df_estoque = oracle.sqlToDataFrame(query_estoque)
+            qtde_estoque = int(df_estoque.iloc[0]["qtde"])
+
+            # Deleta estoque se existir (devido ao ON DELETE CASCADE, pode ser automático)
+            if qtde_estoque > 0:
+                sql_del_estoque = f"DELETE FROM estoque WHERE id_produto = {id_produto}"
+                oracle.write(sql_del_estoque)
+
             # Deleta Produto
             sql_del_produto = f"DELETE FROM produtos WHERE id_produto = {id_produto}"
             oracle.write(sql_del_produto)
-            
+
             # Exibe os atributos do produto excluído
-            print("Produto Removido com Sucesso!")
+            print("\n✅ Produto Removido com Sucesso!")
             print(produto_excluido.to_string())
 

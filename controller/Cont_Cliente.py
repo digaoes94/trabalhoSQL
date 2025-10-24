@@ -133,6 +133,22 @@ class Cont_Cliente:
         df_cliente = oracle.sqlToDataFrame(query)
         return df_cliente.empty
 
+    def _recupera_id_cliente(self, oracle: OracleQueries, cpf: str = None) -> int:
+        """
+        Método auxiliar para buscar apenas o ID do cliente pelo CPF.
+        Retorna o ID do cliente ou None se não encontrado.
+        """
+        if cpf is None:
+            return None
+
+        query = f"SELECT id_cliente, nome FROM clientes WHERE cpf = '{cpf}'"
+        df_cliente = oracle.sqlToDataFrame(query)
+
+        if df_cliente.empty:
+            return None
+        else:
+            return int(df_cliente.iloc[0]["id_cliente"])
+
     # ---------------------------------------------------------------------------
     # MÉTODOS CRUD SOLICITADOS
     # ---------------------------------------------------------------------------
@@ -232,43 +248,101 @@ class Cont_Cliente:
             print(f"O CPF {cpf} não existe.")
             return None
         else:
-            # Recupera o cliente existente para preencher os valores antigos (melhor experiência do usuário)
+            # Recupera o ID do cliente de forma segura
+            id_cliente = self._recupera_id_cliente(oracle, cpf)
+
+            if id_cliente is None:
+                print(f"Erro ao recuperar dados do cliente com CPF {cpf}.")
+                return None
+
+            # Tenta recuperar o cliente completo (com endereço)
             cliente_existente = self._recupera_cliente(oracle, cpf)
-            print(f"\nDados atuais do Cliente: {cliente_existente.to_string()}")
-            print(f"Endereço atual: {cliente_existente.endereco.to_string()}")
-            
+
+            # Exibe dados atuais (com tratamento para quando não tem endereço)
+            if cliente_existente:
+                print(f"\nDados atuais do Cliente: {cliente_existente.to_string()}")
+                print(f"Endereço atual: {cliente_existente.endereco.to_string()}")
+            else:
+                # Se não tem endereço, busca informações básicas
+                query_info = f"SELECT cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
+                df_info = oracle.sqlToDataFrame(query_info)
+                if not df_info.empty:
+                    info = df_info.iloc[0]
+                    print(f"\nDados atuais do Cliente:")
+                    print(f"  CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']} | Telefone: {info['telefone']}")
+                    print("  Obs: Endereço não cadastrado para este cliente")
+
+            # Coleta dados atuais para usar como padrão
+            query_cliente_data = f"SELECT nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
+            df_cliente_data = oracle.sqlToDataFrame(query_cliente_data)
+            if df_cliente_data.empty:
+                print("Erro ao recuperar dados do cliente.")
+                return None
+
+            cliente_data = df_cliente_data.iloc[0]
+            nome_atual = cliente_data["nome"]
+            email_atual = cliente_data["email"]
+            telefone_atual = cliente_data["telefone"]
+
             # Coleta novos dados do Cliente
-            novo_nome = input(f"Novo nome (Atual: {cliente_existente.nome}): ") or cliente_existente.nome
-            novo_email = input(f"Novo e-mail (Atual: {cliente_existente.email}): ") or cliente_existente.email
-            # Assume que telefone é o primeiro item da lista
-            novo_telefone = input(f"Novo telefone (Atual: {cliente_existente.telefone[0] if cliente_existente.telefone else 'N/A'}): ") or (cliente_existente.telefone[0] if cliente_existente.telefone else '')
-            
-            # Coleta novos dados do Endereço (simplificado para Logradouro e Número, mas pode ser estendido)
-            endereco_atual = cliente_existente.endereco
-            novo_logradouro = input(f"Novo Logradouro (Atual: {endereco_atual.logradouro}): ") or endereco_atual.logradouro
-            novo_numero = input(f"Novo Número (Atual: {endereco_atual.numero}): ") or str(endereco_atual.numero)
-            
+            novo_nome = input(f"Novo nome (Atual: {nome_atual}): ") or nome_atual
+            novo_email = input(f"Novo e-mail (Atual: {email_atual}): ") or email_atual
+            novo_telefone = input(f"Novo telefone (Atual: {telefone_atual}): ") or telefone_atual
+
+            # Coleta novos dados do Endereço (se existir)
+            endereco_para_atualizar = False
+            novo_logradouro = None
+            novo_numero = None
+
+            # Verifica se existe endereço cadastrado
+            query_endereco = f"SELECT logradouro, numero FROM enderecos WHERE id_cliente = {id_cliente}"
+            df_endereco = oracle.sqlToDataFrame(query_endereco)
+
+            if not df_endereco.empty:
+                endereco_para_atualizar = True
+                endereco_data = df_endereco.iloc[0]
+                logradouro_atual = endereco_data["logradouro"]
+                numero_atual = endereco_data["numero"]
+
+                novo_logradouro = input(f"Novo Logradouro (Atual: {logradouro_atual}): ") or logradouro_atual
+                novo_numero = input(f"Novo Número (Atual: {numero_atual}): ") or str(numero_atual)
+            else:
+                print("  ⚠️  Este cliente não possui endereço cadastrado")
+                deseja_cadastrar = input("  Deseja cadastrar um endereço agora? (s/n): ").lower()
+                if deseja_cadastrar == 's':
+                    # Aqui você poderia implementar lógica para adicionar endereço
+                    print("  Funcionalidade de adicionar endereço ainda não implementada")
+
             # 1. Atualiza no BD (CLIENTES)
             sql_update_cliente = f"""
-                UPDATE clientes 
-                SET nome = '{novo_nome}', email = '{novo_email}', telefone = '{novo_telefone}' 
+                UPDATE clientes
+                SET nome = '{novo_nome}', email = '{novo_email}', telefone = '{novo_telefone}'
                 WHERE cpf = '{cpf}'
             """
             oracle.write(sql_update_cliente)
-            
-            # 2. Atualiza no BD (ENDERECOS)
-            sql_update_endereco = f"""
-                UPDATE enderecos 
-                SET logradouro = '{novo_logradouro}', numero = {int(novo_numero)}
-                WHERE id_cliente = {cliente_existente.id_cliente}
-            """
-            oracle.write(sql_update_endereco)
-            
+
+            # 2. Atualiza no BD (ENDERECOS) se existir
+            if endereco_para_atualizar:
+                sql_update_endereco = f"""
+                    UPDATE enderecos
+                    SET logradouro = '{novo_logradouro}', numero = {int(novo_numero)}
+                    WHERE id_cliente = {id_cliente}
+                """
+                oracle.write(sql_update_endereco)
+
             # 3. Recupera o cliente atualizado
             cliente_atualizado = self._recupera_cliente(oracle, cpf)
-            
-            print("\nCliente atualizado com sucesso!")
-            print(cliente_atualizado.to_string())
+
+            print("\n✅ Cliente atualizado com sucesso!")
+            if cliente_atualizado:
+                print(cliente_atualizado.to_string())
+            else:
+                # Mostra informações básicas se não conseguir recuperar com endereço
+                query_final = f"SELECT cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}'"
+                df_final = oracle.sqlToDataFrame(query_final)
+                if not df_final.empty:
+                    info = df_final.iloc[0]
+                    print(f"CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']} | Telefone: {info['telefone']}")
             return cliente_atualizado
 
     def deletarCliente(self):
@@ -277,26 +351,57 @@ class Cont_Cliente:
         oracle.connect()
 
         # Solicita ao usuário o CPF do Cliente a ser excluído
-        cpf = input("CPF do Cliente que irá excluir: ")        
+        cpf = input("CPF do Cliente que irá excluir: ")
 
         # Verifica se o cliente existe na base de dados
-        if self.verifica_existencia_cliente(oracle, cpf):            
+        if self.verifica_existencia_cliente(oracle, cpf):
             print(f"O CPF {cpf} não existe.")
         else:
-            # Recupera os dados do cliente antes de excluir para exibição (modelo do professor)
+            # Recupera o ID do cliente de forma segura (sem necessidade de endereço)
+            id_cliente = self._recupera_id_cliente(oracle, cpf)
+
+            if id_cliente is None:
+                print(f"Erro ao recuperar dados do cliente com CPF {cpf}.")
+                return
+
+            # Verifica se existem vendas associadas ao cliente
+            query_vendas = f"SELECT COUNT(*) as qtde FROM vendas WHERE id_cliente = {id_cliente}"
+            df_vendas = oracle.sqlToDataFrame(query_vendas)
+            qtde_vendas = int(df_vendas.iloc[0]["qtde"])
+
+            if qtde_vendas > 0:
+                # Busca o nome do cliente para exibição
+                query_nome = f"SELECT nome FROM clientes WHERE id_cliente = {id_cliente}"
+                df_nome = oracle.sqlToDataFrame(query_nome)
+                nome_cliente = df_nome.iloc[0]["nome"] if not df_nome.empty else "Desconhecido"
+
+                print(f"\n⚠️  Não é possível excluir o cliente '{nome_cliente}'")
+                print(f"Motivo: Existem {qtde_vendas} venda(s) associada(s) a este cliente")
+                print("\n💡 Dica: Remova as vendas associadas antes de deletar o cliente.")
+                return
+
+            # Recupera os dados do cliente antes de excluir para exibição (tenta, mas não garante endereço)
             cliente_excluido = self._recupera_cliente(oracle, cpf)
-            
+
             # 1. Deleta Endereço (tabela dependente)
-            sql_del_endereco = f"DELETE FROM enderecos WHERE id_cliente = {cliente_excluido.id_cliente}"
+            sql_del_endereco = f"DELETE FROM enderecos WHERE id_cliente = {id_cliente}"
             oracle.write(sql_del_endereco)
-            
+
             # 2. Deleta Cliente (tabela principal)
             sql_del_cliente = f"DELETE FROM clientes WHERE cpf = '{cpf}'"
             oracle.write(sql_del_cliente)
-            
+
             # Exibe os atributos do cliente excluído
-            print("Cliente Removido com Sucesso!")
-            print(cliente_excluido.to_string())
+            print("\n✅ Cliente Removido com Sucesso!")
+            if cliente_excluido:
+                print(cliente_excluido.to_string())
+            else:
+                # Se não conseguiu recuperar com endereço, mostra informações básicas
+                query_info = f"SELECT id_cliente, cpf, nome, email, telefone FROM clientes WHERE cpf = '{cpf}' AND ROWNUM = 1"
+                df_info = oracle.sqlToDataFrame(query_info)
+                if not df_info.empty:
+                    info = df_info.iloc[0]
+                    print(f"CPF: {info['cpf']} | Nome: {info['nome']} | Email: {info['email']}")
             
     def verPedidos(self):
         oracle = OracleQueries(can_write=False) # Apenas leitura
